@@ -27,6 +27,8 @@ if let data = FileManager.default.contents(atPath: "/tmp/otter-test-flags.json")
     flag("showHUD", "OTTER_SHOW_HUD")
     flag("showMain", "OTTER_SHOW_MAIN")
     flag("noOnboard", "OTTER_NO_ONBOARD")
+    flag("loginOff", "OTTER_LOGIN_OFF")
+    flag("loginOn", "OTTER_LOGIN_ON")
     if let s = obj["mainSection"] as? String { setenv("OTTER_MAIN_SECTION", s, 1) }
     if let s = obj["autoScan"] as? String { setenv("OTTER_AUTO_SCAN", s, 1) }
     if let s = obj["selftest"] as? String { setenv("OTTER_SELFTEST", s, 1) }

@@ -60,6 +60,20 @@ final class CleanViewModel: ObservableObject {
         scan()
     }
 
+    /// 结果页「完成」：回到清理首页（未扫描状态），方便继续逛其他分区。
+    func finish() {
+        guard !isBusy else { return }
+        phase = .idle
+        lines = []
+        plan = nil
+        selected = []
+        expanded = []
+        result = nil
+        errorText = nil
+        statusLine = ""
+        showConsole = false
+    }
+
     /// 服务未就绪时重试检测（数据层可能在稍后注入）。
     func retryService() {
         objectWillChange.send()
@@ -543,7 +557,9 @@ struct CleanView: View {
                 ConsoleView(lines: result.output.split(separator: "\n").suffix(80).map(String.init),
                             height: 220, title: "清理结果")
             }
-            HStack {
+            HStack(spacing: 10) {
+                Button("完成") { model.finish() }
+                    .buttonStyle(.bordered)
                 Button("再次扫描") { model.scan() }
                     .buttonStyle(.borderedProminent)
                 Spacer()

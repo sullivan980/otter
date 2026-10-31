@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/build/Otter.app"
 STAGE="$ROOT/build/.stage/Otter.app"
 # 构建锁：串行化，避免并发删产物；超过 15 分钟的锁视为残留
+mkdir -p "$ROOT/build"
 LOCK="$ROOT/build/.buildlock"
 if [ -d "$LOCK" ] && [ "$(find "$LOCK" -maxdepth 0 -mmin +15 2>/dev/null | wc -l | tr -d " ")" = "1" ]; then
   rm -rf "$LOCK"
