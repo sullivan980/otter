@@ -88,7 +88,7 @@ capture_hud() {
   local log pid wid
   t5_kill_app
   log="$T5_TMP/shot-hud.log"
-  if ! t5_open_app "-OTTER_NO_ONBOARD=1" "-OTTER_SHOW_HUD=1"; then
+  if ! t5_open_flags '{"showHUD":true,"noOnboard":true}'; then
     echo "  [FAIL] HUD：LaunchServices 启动失败（open $T5_APP""）"
     FAILED=$((FAILED + 1))
     return
@@ -110,12 +110,14 @@ capture_main() {
   sec="$1"
   t5_kill_app
   log="$T5_TMP/shot-main-$sec.log"
-  if ! t5_open_app "-OTTER_NO_ONBOARD=1" "-OTTER_SHOW_MAIN=1" "-OTTER_MAIN_SECTION=$sec" "-OTTER_AUTO_SCAN=$sec"; then
+  if ! t5_open_flags "{\"showMain\":true,\"mainSection\":\"$sec\",\"noOnboard\":true,\"autoScan\":\"$sec\"}"; then
     echo "  [FAIL] 主界面 $sec""：LaunchServices 启动失败（open $T5_APP""）"
     FAILED=$((FAILED + 1))
     return
   fi
   pid="$T5_APP_PID"
+  sleep 0.5
+  rm -f /tmp/otter-test-flags.json
   if [ "$sec" = "clean" ]; then
     sleep 22
   elif [ "$sec" = "uninstall" ]; then
