@@ -12,6 +12,8 @@ final class Prefs {
         case singleMetric         // cpu | mem | disk | up | down
         case hudStyle             // n1 | n8（内置插件 id）
         case launchAtLogin
+        case menuBarOrder       // CSV: cpu,mem,disk,up,down
+        case notificationsEnabled
     }
 
     private func bool(_ k: Key, default def: Bool) -> Bool {
@@ -37,5 +39,21 @@ final class Prefs {
         get { d.string(forKey: Key.hudStyle.rawValue) ?? "n1" }
         set { d.set(newValue, forKey: Key.hudStyle.rawValue) }
     }
-    var launchAtLogin: Bool { get { bool(.launchAtLogin, default: true) } set { d.set(newValue, forKey: Key.launchAtLogin.rawValue) } }
+    var launchAtLogin: Bool { get { bool(.launchAtLogin, default: false) } set { d.set(newValue, forKey: Key.launchAtLogin.rawValue) } }
+
+    var notificationsEnabled: Bool { get { bool(.notificationsEnabled, default: true) } set { d.set(newValue, forKey: Key.notificationsEnabled.rawValue) } }
+
+    /// 自定义菜单栏的指标顺序（CSV 存储，兼容 dev-shell/dev-ui 约定的 "menuBarOrder" 键）。
+    var menuBarOrder: [String] {
+        get {
+            let raw = d.string(forKey: Key.menuBarOrder.rawValue) ?? "cpu,mem,disk,up,down"
+            let ids = raw.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            let valid = ids.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
+            return valid.isEmpty ? ["cpu", "mem", "disk", "up", "down"] : valid
+        }
+        set {
+            let valid = newValue.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
+            d.set(valid.joined(separator: ","), forKey: Key.menuBarOrder.rawValue)
+        }
+    }
 }

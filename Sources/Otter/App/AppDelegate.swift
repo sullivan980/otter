@@ -12,8 +12,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 验收/自测入口：OTTER_SELFTEST=metrics|clean|uninstall → 跑一次并退出
         if let mode = ProcessInfo.processInfo.environment["OTTER_SELFTEST"] {
-            runSelfTest(mode: mode)
+            switch mode {
+            case "menubar":
+                print(MenuBarFormat.selfTestJSON())
+            case "plugins":
+                print(PluginStore.shared.selfTestJSON())
+            case "login-status":
+                print("{\"mode\":\"login-status\",\"enabled\":\(LoginItem.isEnabled)}")
+            default:
+                runSelfTest(mode: mode)
+            }
             exit(0)
+        }
+        if ProcessInfo.processInfo.environment["OTTER_LOGIN_OFF"] != nil {
+            LoginItem.setEnabled(false)
         }
 
         state = AppState()
@@ -23,6 +35,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hud = HUDWindowController(state: state)
         statusBar = StatusBarController(state: state, hud: hud)
         statusBar.install()
+
+        // 启动打点（NF-06）：OTTER_BOOT_LOG=<path> 时写入 {"boot_ms": N}
+        if let out = ProcessInfo.processInfo.environment["OTTER_BOOT_LOG"] {
+            let ms = Int(Date().timeIntervalSince(otterProcessStart) * 1000)
+            let body = "{\"boot_ms\":\(ms)}"
+            let path = out.isEmpty ? "/tmp/otter-boot.json" : out
+            try? body.write(toFile: path, atomically: true, encoding: .utf8)
+            NSLog("[otter] boot %d ms", ms)
+        }
 
         state.openMainWindow = { [weak self] in self?.showMain(section: nil) }
         state.openMainSection = { [weak self] sec in self?.showMain(section: sec) }
@@ -43,8 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // 首次启动引导（dev-shell 实现三步窗口）
-        OnboardingController.shared.presentIfNeeded()
+        // 首次启动引导（dev-shell 实现三步窗口；验收可 OTTER_NO_ONBOARD=1 跳过）
+        if ProcessInfo.processInfo.environment["OTTER_NO_ONBOARD"] == nil {
+            OnboardingController.shared.showIfNeeded()
+        }
     }
 
     private func showMain(section: String?) {

@@ -17,7 +17,12 @@ struct CleanCategory: Identifiable, Hashable {
 
 struct CleanPlan {
     let categories: [CleanCategory]
+    /// 各大类求和（可能因 mole 输出跨分类重复而偏高，仅用于分类展示）。
     var totalBytes: Int64 { categories.reduce(0) { $0 + $1.bytes } }
+    /// mole 摘要里的「可释放空间」（与 mole 自己的 Potential space 一致，优先用于对外展示）。
+    var potentialBytes: Int64?
+    /// mole 摘要里的条目数（可空）。
+    var summaryItems: Int?
     let rawText: String
 }
 

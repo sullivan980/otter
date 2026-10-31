@@ -1,0 +1,482 @@
+import SwiftUI
+import AppKit
+import Foundation
+
+// MARK: - 菜单栏设置状态
+//
+// 4 预设：极简 / CPU+内存 / 单指标 / 自定义。
+// 自定义：5 指标勾选 + 顺序（Prefs.menuBarOrder）+ 按负载着色。
+// 修改后写 Prefs 并发 "OtterMenuBarPrefsChanged"，dev-shell 的菜单栏 1 秒内刷新。
+final class MenuBarSettings: ObservableObject {
+    static let didChangeNotification = Notification.Name("OtterMenuBarPrefsChanged")
+
+    struct MetricDef {
+        let id: String
+        let name: String
+        let icon: String
+    }
+
+    static let defs: [MetricDef] = [
+        MetricDef(id: "cpu", name: "CPU", icon: "cpu"),
+        MetricDef(id: "mem", name: "内存", icon: "memorychip"),
+        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive"),
+        MetricDef(id: "up", name: "上传", icon: "arrow.up"),
+        MetricDef(id: "down", name: "下载", icon: "arrow.down")
+    ]
+
+    @Published var preset: String { didSet { persist() } }
+    @Published var singleMetric: String { didSet { persist() } }
+    @Published var showCPU: Bool { didSet { persist() } }
+    @Published var showMem: Bool { didSet { persist() } }
+    @Published var showDisk: Bool { didSet { persist() } }
+    @Published var showUp: Bool { didSet { persist() } }
+    @Published var showDown: Bool { didSet { persist() } }
+    @Published var colorByLoad: Bool { didSet { persist() } }
+    @Published var order: [String] { didSet { persist() } }
+
+    init() {
+        let p = Prefs.shared
+        preset = p.menuBarPreset
+        singleMetric = p.singleMetric
+        showCPU = p.showCPU
+        showMem = p.showMem
+        showDisk = p.showDisk
+        showUp = p.showUp
+        showDown = p.showDown
+        colorByLoad = p.colorByLoad
+        order = p.menuBarOrder
+    }
+
+    /// 外部（其他窗口）改动后回读。
+    func refresh() {
+        let p = Prefs.shared
+        if preset != p.menuBarPreset { preset = p.menuBarPreset }
+        if singleMetric != p.singleMetric { singleMetric = p.singleMetric }
+        if showCPU != p.showCPU { showCPU = p.showCPU }
+        if showMem != p.showMem { showMem = p.showMem }
+        if showDisk != p.showDisk { showDisk = p.showDisk }
+        if showUp != p.showUp { showUp = p.showUp }
+        if showDown != p.showDown { showDown = p.showDown }
+        if colorByLoad != p.colorByLoad { colorByLoad = p.colorByLoad }
+        if order != p.menuBarOrder { order = p.menuBarOrder }
+    }
+
+    private func persist() {
+        let p = Prefs.shared
+        p.menuBarPreset = preset
+        p.singleMetric = singleMetric
+        p.showCPU = showCPU
+        p.showMem = showMem
+        p.showDisk = showDisk
+        p.showUp = showUp
+        p.showDown = showDown
+        p.colorByLoad = colorByLoad
+        p.menuBarOrder = order
+        NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
+    }
+
+    // MARK: 查询
+
+    func metricName(_ id: String) -> String {
+        Self.defs.first { $0.id == id }?.name ?? id
+    }
+
+    func metricIcon(_ id: String) -> String {
+        Self.defs.first { $0.id == id }?.icon ?? "circle"
+    }
+
+    func isVisible(_ id: String) -> Bool {
+        switch id {
+        case "cpu": return showCPU
+        case "mem": return showMem
+        case "disk": return showDisk
+        case "up": return showUp
+        case "down": return showDown
+        default: return false
+        }
+    }
+
+    func setVisible(_ id: String, _ visible: Bool) {
+        switch id {
+        case "cpu": showCPU = visible
+        case "mem": showMem = visible
+        case "disk": showDisk = visible
+        case "up": showUp = visible
+        case "down": showDown = visible
+        default: break
+        }
+    }
+
+    func move(_ id: String, up: Bool) {
+        guard let index = order.firstIndex(of: id) else { return }
+        let target = up ? index - 1 : index + 1
+        guard target >= 0, target < order.count else { return }
+        var next = order
+        next.swapAt(index, target)
+        order = next
+    }
+
+    /// 菜单栏预览（与真实菜单栏模块顺序/口径一致）。
+    func previewItems(metrics: SystemMetrics) -> [(icon: String, value: String)] {
+        let ids: [String]
+        switch preset {
+        case "minimal": ids = []
+        case "dual": ids = ["cpu", "mem"]
+        case "single": ids = [singleMetric]
+        default: ids = order.filter { isVisible($0) }
+        }
+        return ids.map { id in
+            switch id {
+            case "mem": return ("memorychip", Fmt.percent(metrics.memUsedPercent))
+            case "disk": return ("internaldrive", Fmt.percent(metrics.diskUsedPercent))
+            case "up": return ("arrow.up", Fmt.rate(metrics.upBytesPerSec))
+            case "down": return ("arrow.down", Fmt.rate(metrics.downBytesPerSec))
+            default: return ("cpu", Fmt.percent(metrics.cpuPercent))
+            }
+        }
+    }
+}
+
+// MARK: - 设置分区（视图）
+// 局部 UI 状态放 ObservableObject（本机无 SwiftUIMacros，不能用 @State）。
+final class SettingsUIState: ObservableObject {
+    @Published var launchAtLogin: Bool = Prefs.shared.launchAtLogin
+    @Published var loginActual: Bool = LoginItem.isEnabled
+    @Published var notificationsEnabled: Bool = Prefs.shared.notificationsEnabled
+    @Published var toast: String?
+}
+
+struct SettingsView: View {
+    @ObservedObject var state: AppState
+    @StateObject private var menu = MenuBarSettings()
+    @StateObject private var permissions = PermissionModel()
+    @StateObject private var ui = SettingsUIState()
+    @ObservedObject private var plugins = PluginStore.shared
+
+    private let presets: [(id: String, name: String, icon: String, desc: String)] = [
+        ("minimal", "极简", "water.waves", "只显示图标"),
+        ("dual", "双指标", "cpu", "CPU + 内存"),
+        ("single", "单指标", "gauge", "选一个指标"),
+        ("custom", "自定义", "slider.horizontal.3", "5 指标勾选 + 排序")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SectionHeader(title: "设置",
+                          subtitle: "菜单栏显示、登录自启、通知、系统权限与 HUD 插件。修改即时生效并持久化。")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    generalSection
+                    menuBarSection
+                    PermissionSection(model: permissions)
+                    PluginSection(store: plugins)
+                    aboutSection
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+            }
+        }
+        .onAppear {
+            menu.refresh()
+            permissions.autoCheckIfNeeded()
+            refreshLoginActual()
+            ui.notificationsEnabled = Prefs.shared.notificationsEnabled
+        }
+    }
+
+    // MARK: 通用
+
+    private var generalSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SubHeader(text: "通用")
+
+                settingRow(title: "登录时自动启动",
+                           desc: "开机后常驻菜单栏，指标随系统启动。") {
+                    Toggle("", isOn: launchBinding)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                }
+                if ui.launchAtLogin != ui.loginActual {
+                    HStack(spacing: 6) {
+                        Text(ui.launchAtLogin
+                             ? "系统尚未记录该登录项（开发构建未签名时常见）。打包签名后会正常生效。"
+                             : "系统仍显示登录项已开启，可能需稍等生效。")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                        Button("重新检测") {
+                            refreshLoginActual()
+                            if ui.launchAtLogin == ui.loginActual {
+                                ui.toast = "登录项状态已同步。"
+                            }
+                        }
+                        .buttonStyle(.link)
+                        .font(.system(size: 10))
+                    }
+                }
+
+                Divider()
+
+                settingRow(title: "系统通知",
+                           desc: "清理或卸载完成后发送通知（需系统授权）。") {
+                    HStack(spacing: 8) {
+                        Button("发送测试") {
+                            Notifications.shared.post(title: "Otter 通知测试",
+                                                      body: "通知已开启，清理与卸载完成后会在这里提醒你。")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(!ui.notificationsEnabled)
+                        Toggle("", isOn: notificationBinding)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
+
+                Divider()
+
+                settingRow(title: "欢迎引导",
+                           desc: "三步了解菜单栏、系统权限与自启设置，可随时重看。") {
+                    Button("重看引导") {
+                        OnboardingController.shared.show(force: true)
+                        ui.toast = "已请求打开欢迎引导。"
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                if let toast = ui.toast {
+                    StatusBanner(kind: .info, title: toast, actionTitle: "知道了") { ui.toast = nil }
+                }
+            }
+        }
+    }
+
+    private var launchBinding: Binding<Bool> {
+        Binding(get: { ui.launchAtLogin }, set: { value in
+            ui.launchAtLogin = value
+            Prefs.shared.launchAtLogin = value
+            // 兼容 dev-shell 的 @discardableResult 版本：Void / Bool 返回值都可忽略。
+            LoginItem.setEnabled(value)
+            // 立即回读一次，再轮询几次：SMAppService 的状态更新有延迟，
+            // 避免开关已关闭却残留「登录项尚未移除」的陈旧提示。
+            refreshLoginActual()
+            for delay in [0.2, 0.6, 1.2, 2.4] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    refreshLoginActual()
+                }
+            }
+        })
+    }
+
+    /// 按系统实际状态刷新登录项，并清除已一致的陈旧提示。
+    private func refreshLoginActual() {
+        let actual = LoginItem.isEnabled
+        if ui.loginActual != actual { ui.loginActual = actual }
+        if ui.launchAtLogin == actual { ui.toast = nil }
+    }
+
+    private var notificationBinding: Binding<Bool> {
+        Binding(get: { ui.notificationsEnabled }, set: { value in
+            ui.notificationsEnabled = value
+            Prefs.shared.notificationsEnabled = value
+            if value { Notifications.shared.requestAuthorization() }
+        })
+    }
+
+    // MARK: 菜单栏
+
+    private var menuBarSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SubHeader(text: "菜单栏显示")
+                Text("选一个预设，或在自定义里勾选指标、调整顺序与着色。菜单栏至少保留图标，入口不会消失。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    ForEach(presets, id: \.id) { preset in
+                        presetCard(preset)
+                    }
+                }
+
+                menuBarPreview
+
+                if menu.preset == "single" {
+                    HStack(spacing: 10) {
+                        Text("单指标").font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        Picker("", selection: $menu.singleMetric) {
+                            ForEach(MenuBarSettings.defs, id: \.id) { def in
+                                Text(def.name).tag(def.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 130)
+                        Spacer()
+                    }
+                }
+
+                if menu.preset == "custom" {
+                    Divider()
+                    VStack(spacing: 6) {
+                        ForEach(Array(menu.order.enumerated()), id: \.offset) { index, id in
+                            HStack(spacing: 8) {
+                                Toggle("", isOn: Binding(
+                                    get: { menu.isVisible(id) },
+                                    set: { menu.setVisible(id, $0) }
+                                ))
+                                .toggleStyle(.checkbox)
+                                .labelsHidden()
+                                Image(systemName: menu.metricIcon(id))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 15)
+                                Text(menu.metricName(id)).font(.system(size: 11.5))
+                                Spacer()
+                                Button {
+                                    menu.move(id, up: true)
+                                } label: {
+                                    Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold))
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(index == 0)
+                                Button {
+                                    menu.move(id, up: false)
+                                } label: {
+                                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
+                                }
+                                .buttonStyle(.borderless)
+                                .disabled(index == menu.order.count - 1)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        Divider()
+                        HStack {
+                            Toggle("按负载着色（≥60% 黄 / ≥85% 红）", isOn: $menu.colorByLoad)
+                                .toggleStyle(.switch)
+                                .font(.system(size: 11.5))
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func presetCard(_ preset: (id: String, name: String, icon: String, desc: String)) -> some View {
+        let selected = menu.preset == preset.id
+        return Button {
+            menu.preset = preset.id
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Image(systemName: preset.icon).font(.system(size: 11, weight: .medium))
+                    Text(preset.name).font(.system(size: 11.5, weight: .semibold))
+                    Spacer(minLength: 0)
+                    if selected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                Text(preset.desc)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(9)
+            .frame(maxWidth: .infinity, minHeight: 54, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(selected ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(selected ? Color.accentColor.opacity(0.55) : Color.primary.opacity(0.07),
+                                  lineWidth: 1)
+            )
+            .foregroundStyle(selected ? Color.accentColor : Color.primary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var menuBarPreview: some View {
+        let items = menu.previewItems(metrics: state.metrics)
+        return HStack(spacing: 8) {
+            Text("预览").font(.system(size: 10)).foregroundStyle(.tertiary)
+            HStack(spacing: 8) {
+                Image(systemName: "water.waves")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 3) {
+                        Image(systemName: item.icon).font(.system(size: 9, weight: .semibold))
+                        Text(item.value).font(.system(size: 11, weight: .medium)).monospacedDigit()
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+            )
+            Spacer()
+            Text("1 秒内自动刷新").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: 关于
+
+    private var aboutSection: some View {
+        PanelCard {
+            HStack(alignment: .center, spacing: 13) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "water.waves")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 7) {
+                        Text("Otter").font(.system(size: 16, weight: .bold))
+                        KindTag(text: "v" + appVersion, color: .secondary)
+                    }
+                    Text("原生 macOS 系统状态与清理工具 · 内置 mole 引擎")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        Text("引擎 mole").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text("菜单栏常驻 · HUD 400×520").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text("内存 footprint 目标 ≤25MB").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                    }
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
+    }
+
+    // MARK: 通用行
+
+    private func settingRow<Accessory: View>(title: String,
+                                             desc: String,
+                                             @ViewBuilder accessory: () -> Accessory) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 12, weight: .medium))
+                Text(desc).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+            }
+            Spacer(minLength: 10)
+            accessory()
+        }
+    }
+}

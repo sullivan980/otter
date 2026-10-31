@@ -1,0 +1,22 @@
+Clean Your Mac
+Dry Run Mode, Preview only, no deletions
+◎ System caches need sudo, run sudo -v && mo clean --dry-run for full preview
+⚙ Apple Silicon | Free space: 408.78GB
+✓ Whitelist: 19 core patterns active
+  ↳ /Users/ksullivan/Library/Caches/JetBrains*
+➤ User essentials
+  → User app cache · 22 items, 976.3MB dry
+  → User app logs · 11 items, 146KB dry
+➤ Browsers
+  → Chrome cache · 826.5MB dry
+  → Chrome Service Worker, would clean 86.4MB, 0 protected
+➤ Cloud & Office
+  ✓ Nothing to clean
+➤ Developer tools
+  → npm cache · would clean
+  ⊙ Docker unused data · review with docker system df
+======================================================================
+Dry run complete - no changes made
+Potential space: 2.93GB | Items: 265 | Categories: 6
+Detailed file list: /Users/ksullivan/.config/mole/clean-list.txt
+======================================================================

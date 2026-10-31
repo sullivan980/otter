@@ -16,6 +16,8 @@
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSHumanReadableCopyright</key><string>Otter · 个人项目</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>用于检测与执行 Finder 自动化（清空废纸篓、卸载移入废纸篓）。</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>
 </plist>

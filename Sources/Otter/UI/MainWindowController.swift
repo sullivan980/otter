@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+// MARK: - 主界面分区
+
 enum MainSection: String, CaseIterable, Identifiable {
     case clean, uninstall, disk, settings
     var id: String { rawValue }
@@ -22,75 +24,36 @@ enum MainSection: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - 主窗口
+//
+// 原生窗口：隐藏标题栏、内容延伸到顶部（侧栏毛玻璃透出），红绿灯悬浮在侧栏品牌区上方。
+// 四个分区由 MainViews/ 下视图实现，分区状态由 MainRootView 持有。
 final class MainWindowController: NSWindowController {
     private let state: AppState
 
     init(state: AppState) {
         self.state = state
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 640),
-                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 660),
+                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                            backing: .buffered,
                            defer: false)
         win.title = "Otter"
+        win.titleVisibility = .hidden
         win.titlebarAppearsTransparent = true
-        win.minSize = NSSize(width: 760, height: 520)
+        win.isMovableByWindowBackground = true
+        win.minSize = NSSize(width: 820, height: 560)
+        win.backgroundColor = .windowBackgroundColor
         win.center()
         win.isReleasedWhenClosed = false
         super.init(window: win)
-        win.contentView = NSHostingView(rootView: MainView(state: state))
+
+        win.contentView = NSHostingView(rootView: MainRootView(state: state))
+        win.setFrameAutosaveName("OtterMainWindow")
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func select(section: String) {
         if let s = MainSection(rawValue: section) { state.selectedSection = s.rawValue }
-    }
-}
-
-/// 主界面占位：dev-ui 负责实现四个分区。
-struct MainView: View {
-    @ObservedObject var state: AppState
-
-    var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Otter").font(.system(size: 17, weight: .semibold)).padding(.bottom, 12)
-                ForEach(MainSection.allCases) { s in
-                    Button {
-                        state.selectedSection = s.rawValue
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: s.icon).frame(width: 18)
-                            Text(s.title)
-                            Spacer()
-                        }
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(state.selectedSection == s.rawValue ? Color.white.opacity(0.10) : Color.clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-                Spacer()
-            }
-            .padding(14)
-            .frame(width: 180)
-            .background(Color.black.opacity(0.16))
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(MainSection(rawValue: state.selectedSection)?.title ?? "")
-                    .font(.system(size: 22, weight: .semibold))
-                Text("分区开发中，由 dev-ui 实现。")
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(22)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(minWidth: 760, minHeight: 520)
     }
 }

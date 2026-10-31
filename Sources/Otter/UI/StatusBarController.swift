@@ -1,10 +1,20 @@
 import AppKit
+import Combine
 
+/// 菜单栏控制器：
+///   · 4 预设（极简 / 双指标 / 单指标+趋势 / 自定义）；
+///   · 格式规范：百分比不补零、速率带单位、默认单色、仅阈值色（≥85 红 / ≥60 黄，需开关）、
+///     SF Symbol 着色图随深浅色反色；
+///   · 宽度预算 120pt，超限自动降级：去趋势 → 只留主指标 → 只留图标；
+///   · 数据未就绪显示 "--" 占位；
+///   · 左键开 HUD，右键菜单（面板 / 主界面 / 设置 / 暂停采集 / 欢迎引导 / 关于 / 退出）。
 final class StatusBarController: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let state: AppState
     private let hud: HUDWindowController
     private var timer: Timer?
+    private var cancellables = Set<AnyCancellable>()
+    private var lastSignature = ""
 
     init(state: AppState, hud: HUDWindowController) {
         self.state = state
@@ -18,118 +28,283 @@ final class StatusBarController: NSObject {
         button.target = self
         button.action = #selector(onClick)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        refresh()
-        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.refresh() }
+        button.toolTip = "Otter · 系统状态"
+
+        // 趋势历史：每次采样喂给 ShellState（HUD 火花线也读它）
+        state.$metrics
+            .receive(on: RunLoop.main)
+            .sink { [weak self] m in
+                ShellState.shared.ingest(m)
+                self?.refresh(force: false)
+            }
+            .store(in: &cancellables)
+
+        // 设置页 / 引导改完偏好后立即刷新
+        NotificationCenter.default.addObserver(forName: ShellPrefs.changedNotification,
+                                               object: nil,
+                                               queue: .main) { [weak self] _ in
+            self?.refresh(force: true)
+        }
+
+        // 点按系统通知 → 打开主界面对应分区
+        Notifications.shared.onOpenSection = { [weak self] section in
+            guard let self = self else { return }
+            if let section = section {
+                self.state.openMainSection?(section)
+            } else {
+                self.state.openMainWindow?()
+            }
+        }
+
+        refresh(force: true)
+
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.refresh(force: false) }
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }
 
+    // MARK: - 点击
+
     @objc private func onClick() {
-        if NSApp.currentEvent?.type == .rightMouseUp {
+        if let event = NSApp.currentEvent, event.type == .rightMouseUp {
             showMenu()
-            return
+        } else {
+            hud.toggle(relativeTo: item.button)
         }
-        hud.toggle(relativeTo: item.button)
+        refresh(force: true)
     }
 
+    /// 开发/验收钩子：AppDelegate 的 OTTER_SHOW_HUD=1 会调用
+    func showHUD() { hud.show(relativeTo: item.button) }
+
+    // MARK: - 右键菜单
+
     private func showMenu() {
+        guard let button = item.button else { return }
         let menu = NSMenu()
-        menu.addItem(withTitle: "打开面板", action: #selector(openHUD), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "主界面", action: #selector(openMain), keyEquivalent: "").target = self
+        menu.autoenablesItems = false
+
+        addItem(menu, "打开面板", #selector(openHUD), "")
+        addItem(menu, "主界面", #selector(openMain), "")
+        addItem(menu, "设置", #selector(openSettings), "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "设置", action: #selector(openSettings), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "退出 Otter", action: #selector(quit), keyEquivalent: "q").target = self
-        item.menu = menu
-        item.button?.performClick(nil)
-        item.menu = nil
+
+        let pause = NSMenuItem(title: state.isPaused ? "恢复采集" : "暂停采集",
+                               action: #selector(togglePause),
+                               keyEquivalent: "")
+        pause.target = self
+        pause.state = state.isPaused ? .on : .off
+        menu.addItem(pause)
+
+        menu.addItem(.separator())
+        addItem(menu, "欢迎引导…", #selector(openOnboarding), "")
+        addItem(menu, "关于 Otter", #selector(openAbout), "")
+        menu.addItem(.separator())
+
+        let quit = NSMenuItem(title: "退出 Otter", action: #selector(quit), keyEquivalent: "q")
+        quit.target = self
+        menu.addItem(quit)
+
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
+    }
+
+    private func addItem(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) {
+        let mi = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        mi.target = self
+        menu.addItem(mi)
     }
 
     @objc private func openHUD() { hud.show(relativeTo: item.button) }
-
-    /// 开发/验收用：外部触发弹 HUD
-    func showHUD() { hud.show(relativeTo: item.button) }
     @objc private func openMain() { state.openMainWindow?() }
     @objc private func openSettings() { state.openMainSection?("settings") }
+    @objc private func togglePause() {
+        state.setPaused(!state.isPaused)
+        refresh(force: true)
+    }
+    @objc private func openOnboarding() { OnboardingController.shared.show(force: true) }
+    @objc private func openAbout() { NSApp.orderFrontStandardAboutPanel(nil) }
     @objc private func quit() { NSApp.terminate(nil) }
+    // MARK: - 渲染
 
-    func refresh() {
+    /// force=false 时按「指标时间戳 + 外观 + 偏好 + 暂停」签名去重，避免每秒重绘
+    func refresh(force: Bool = false) {
         guard let button = item.button else { return }
         let m = state.metrics
-        let preset = Prefs.shared.menuBarPreset
+        let preset = MenuBarPreset.current()
+        let appearance = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) ?? .aqua
+        let signature = [
+            preset.rawValue,
+            String(m.timestamp.timeIntervalSince1970),
+            String(m.isReady),
+            appearance.rawValue,
+            String(state.isPaused),
+            Self.prefsSignature(),
+        ].joined(separator: "|")
+        guard force || signature != lastSignature else { return }
+        lastSignature = signature
 
-        if preset == "minimal" {
-            item.length = NSStatusItem.squareLength
-            button.attributedTitle = NSAttributedString(string: "")
-            button.image = Self.brandTemplateImage()
+        let labelColor = MenuBarGlyph.currentLabelColor()
+        button.toolTip = tooltip(m)
+
+        let kinds = Self.kinds(for: preset)
+        if kinds.isEmpty {
+            // 极简 / 自定义未勾选任何指标 → 只留獭图标
+            applyIconOnly(button)
             return
         }
+
         button.image = nil
         item.length = NSStatusItem.variableLength
 
-        var ids: [String] = []
+        let trend: MetricKind? = preset == .single ? kinds.first : nil
+        if let title = Self.fittedTitle(kinds: kinds, trend: trend, metrics: m, labelColor: labelColor, colorByLoad: Prefs.shared.colorByLoad) {
+            button.attributedTitle = title
+        } else {
+            // 超出宽度预算且降级到底 → 图标
+            applyIconOnly(button)
+        }
+    }
+
+    private func applyIconOnly(_ button: NSStatusBarButton) {
+        item.length = NSStatusItem.squareLength
+        button.attributedTitle = NSAttributedString(string: "")
+        button.image = MenuBarGlyph.brandTemplate()
+    }
+
+    /// 当前预设要显示的指标（自定义会同时应用勾选与排序）
+    static func kinds(for preset: MenuBarPreset) -> [MetricKind] {
         switch preset {
-        case "single": ids = [Prefs.shared.singleMetric]
-        case "custom":
-            if Prefs.shared.showCPU { ids.append("cpu") }
-            if Prefs.shared.showMem { ids.append("mem") }
-            if Prefs.shared.showDisk { ids.append("disk") }
-            if Prefs.shared.showUp { ids.append("up") }
-            if Prefs.shared.showDown { ids.append("down") }
-        default: ids = ["cpu", "mem"]
+        case .minimal:
+            return []
+        case .dual:
+            return [.cpu, .mem]
+        case .single:
+            return [MetricKind.parse(Prefs.shared.singleMetric) ?? .cpu]
+        case .custom:
+            let enabled: [MetricKind: Bool] = [
+                .cpu: Prefs.shared.showCPU,
+                .mem: Prefs.shared.showMem,
+                .disk: Prefs.shared.showDisk,
+                .up: Prefs.shared.showUp,
+                .down: Prefs.shared.showDown,
+            ]
+            let order = Prefs.shared.menuBarOrder.compactMap { MetricKind.parse($0) }
+            let picked = order.filter { enabled[$0] == true }
+            return picked
         }
-        button.attributedTitle = Self.attributedTitle(ids: ids, metrics: m, colorByLoad: Prefs.shared.colorByLoad)
     }
 
-    // MARK: - 菜单栏标题（格式规范：不补零 / 速率带单位 / 默认单色 / 越界才着色）
-
-    private static func brandTemplateImage() -> NSImage? {
-        let img = NSImage(systemSymbolName: "water.waves", accessibilityDescription: "Otter")
-            ?? NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Otter")
-        img?.isTemplate = true
-        return img
+    static func prefsSignature() -> String {
+        [
+            String(Prefs.shared.colorByLoad),
+            String(Prefs.shared.singleMetric),
+            String(Prefs.shared.showCPU), String(Prefs.shared.showMem),
+            String(Prefs.shared.showDisk), String(Prefs.shared.showUp),
+            String(Prefs.shared.showDown),
+            Prefs.shared.menuBarOrder.joined(separator: ","),
+        ].joined(separator: ",")
     }
 
-    private static func symbolAttachment(_ name: String) -> NSAttributedString {
-        guard let img = NSImage(systemSymbolName: name, accessibilityDescription: nil) else {
-            return NSAttributedString(string: "")
+    /// 验收辅助：按当前偏好生成某个预设的菜单栏标题（趋势/降级与线上一致）。
+    /// 浅色/深色取决于 NSApp.effectiveAppearance，供 offscreen 渲染断言用。
+    static func previewTitle(preset: MenuBarPreset, metrics: SystemMetrics) -> NSAttributedString {
+        let kinds = kinds(for: preset)
+        guard !kinds.isEmpty else { return NSAttributedString(string: "") }
+        let trend: MetricKind? = preset == .single ? kinds.first : nil
+        return fittedTitle(kinds: kinds,
+                           trend: trend,
+                           metrics: metrics,
+                           labelColor: MenuBarGlyph.currentLabelColor(),
+                           colorByLoad: Prefs.shared.colorByLoad) ?? NSAttributedString(string: "")
+    }
+
+    /// 按预算逐级降级，返回第一条放得下的标题
+    static func fittedTitle(kinds: [MetricKind], trend: MetricKind?, metrics m: SystemMetrics, labelColor: NSColor, colorByLoad: Bool) -> NSAttributedString? {
+        var candidates: [(kinds: [MetricKind], withTrend: Bool)] = []
+        if trend != nil {
+            candidates.append((kinds, true))
+            candidates.append((kinds, false))
+        } else {
+            // 自定义多指标：从完整列表开始逐个丢弃末尾的次要指标，尽量多留
+            var remaining = kinds
+            while remaining.count > 1 {
+                candidates.append((remaining, false))
+                remaining.removeLast()
+            }
+            candidates.append((remaining, false))
         }
-        img.isTemplate = true
-        let att = NSTextAttachment()
-        att.image = img
-        att.bounds = CGRect(x: 0, y: -1.5, width: 11, height: 11)
-        return NSAttributedString(attachment: att)
+        for c in candidates {
+            let att = Self.buildTitle(kinds: c.kinds,
+                                      trend: c.withTrend ? trend : nil,
+                                      metrics: m,
+                                      labelColor: labelColor,
+                                      colorByLoad: colorByLoad)
+            if att.size().width + 2 <= ShellPrefs.menuBarWidthBudget { return att }
+        }
+        return nil
     }
 
+    // MARK: - 菜单栏标题（格式规范落到这一个函数）
+
+    /// 兼容旧签名（tester/devtest 可能直接断言）
     static func attributedTitle(ids: [String], metrics m: SystemMetrics, colorByLoad: Bool) -> NSAttributedString {
-        let font = NSFont.menuBarFont(ofSize: 0)
-        let out = NSMutableAttributedString()
-        let labelColor = NSColor.labelColor
+        let kinds = ids.compactMap { MetricKind.parse($0) }
+        return buildTitle(kinds: kinds,
+                          trend: nil,
+                          metrics: m,
+                          labelColor: MenuBarGlyph.currentLabelColor(),
+                          colorByLoad: colorByLoad)
+    }
 
-        func color(for v: Double) -> NSColor {
-            guard colorByLoad else { return labelColor }
-            if v >= 85 { return .systemRed }
-            if v >= 60 { return .systemYellow }
-            return labelColor
+    private static func buildTitle(kinds: [MetricKind],
+                                   trend: MetricKind?,
+                                   metrics m: SystemMetrics,
+                                   labelColor: NSColor,
+                                   colorByLoad: Bool) -> NSAttributedString {
+        let baseFont = NSFont.menuBarFont(ofSize: 0)
+        let valueFont = NSFont.monospacedDigitSystemFont(ofSize: baseFont.pointSize, weight: .regular)
+        let out = NSMutableAttributedString()
+
+        func text(_ s: String, _ color: NSColor) {
+            out.append(NSAttributedString(string: s, attributes: [
+                .font: valueFont,
+                .foregroundColor: color,
+            ]))
         }
 
-        for (i, id) in ids.enumerated() {
-            if i > 0 {
-                out.append(NSAttributedString(string: " ", attributes: [.font: font, .foregroundColor: labelColor]))
+        for (i, kind) in kinds.enumerated() {
+            if i > 0 { text(" ", labelColor) }
+            if let sym = MenuBarGlyph.symbol(kind.symbol, pointSize: 11, color: labelColor) {
+                out.append(MenuBarGlyph.attachment(sym, font: valueFont))
             }
-            let value: String
-            let sym: String
-            let load: Double
-            switch id {
-            case "mem": value = Fmt.percent(m.memUsedPercent); sym = "memorychip"; load = m.memUsedPercent
-            case "disk": value = Fmt.percent(m.diskUsedPercent); sym = "internaldrive"; load = m.diskUsedPercent
-            case "up": value = Fmt.rate(m.upBytesPerSec); sym = "arrow.up"; load = 0
-            case "down": value = Fmt.rate(m.downBytesPerSec); sym = "arrow.down"; load = 0
-            default: value = Fmt.percent(m.cpuPercent); sym = "cpu"; load = m.cpuPercent
+            let color = ShellPrefs.menuBarColor(load: kind.load(m), colorByLoad: colorByLoad)
+            text(kind.display(m), color)
+
+            if let t = trend, kind == t {
+                text(" ", labelColor)
+                let raw = ShellState.shared.historyValues(kind, count: 8)
+                let normalized: [Double]
+                if kind.isRate {
+                    let peak = raw.max() ?? 0
+                    normalized = peak > 0 ? raw.map { $0 / peak } : raw.map { _ in 0 }
+                } else {
+                    normalized = raw.map { min(max($0 / 100, 0), 1) }
+                }
+                out.append(MenuBarGlyph.attachment(MenuBarGlyph.trend(normalized, color: labelColor), font: valueFont))
             }
-            let c = color(for: load)
-            out.append(symbolAttachment(sym))
-            out.append(NSAttributedString(string: value, attributes: [.font: font, .foregroundColor: c]))
         }
         return out
+    }
+
+    // MARK: - tooltip
+
+    private func tooltip(_ m: SystemMetrics) -> String {
+        let head = state.isPaused ? "采集已暂停 · " : ""
+        guard m.isReady else { return head + "Otter · 正在读取系统指标…" }
+        let parts = MetricKind.allCases.map { "\($0.title) \($0.display(m))" }
+        var detail = parts.joined(separator: " · ")
+        detail += " · 已开机 \(Fmt.uptime(m.uptime))"
+        if m.coreCount > 0 { detail += " · \(m.coreCount) 核" }
+        return head + detail
     }
 }

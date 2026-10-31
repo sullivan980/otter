@@ -2,3 +2,4 @@ build/
 Otter.dmg
 .DS_Store
 *.log
+.idea/
