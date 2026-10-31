@@ -15,13 +15,22 @@ struct MainRootView: View {
     @StateObject private var disk = DiskViewModel()
 
     var body: some View {
-        HStack(spacing: 0) {
-            MainSidebar(state: state)
-            Divider().overlay(theme.panelStroke)
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(ContentBackground(theme: theme))
+        ZStack {
+            // 半透明主题底：叠在窗口级毛玻璃上，形成一体化的玻璃面。
+            ContentBackground(theme: theme)
+                .opacity(theme.usesMaterial ? 0.60 : 0.92)
+            HStack(spacing: 0) {
+                MainSidebar(state: state)
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.white.opacity(theme.isDark ? 0.10 : 0.35), lineWidth: 1)
+                .allowsHitTesting(false)
+        )
+        .background(WindowAppearance(isDark: theme.isDark).frame(width: 0, height: 0))
         .tint(theme.accent)
         .preferredColorScheme(theme.isDark ? .dark : .light)
         .ignoresSafeArea(.container, edges: .top)
@@ -50,11 +59,14 @@ struct MainSidebar: View {
     private var current: MainSection { MainSection(rawValue: state.selectedSection) ?? .clean }
     private var theme: AppTheme { ThemeStore.shared.theme }
 
+    /// 侧栏不再单独铺底：与内容共用同一块窗口玻璃，只叠一层极淡的高光，形成一体化。
     private var sidebarBackground: some View {
-        ZStack {
-            ThemeStore.shared.theme.sidebar
-            if ThemeStore.shared.theme.usesMaterial { SidebarMaterial().opacity(0.55) }
-        }
+        LinearGradient(
+            colors: ThemeStore.shared.theme.usesMaterial
+                ? [Color.white.opacity(0.055), Color.white.opacity(0.012)]
+                : [ThemeStore.shared.theme.sidebar.opacity(0.55), ThemeStore.shared.theme.sidebar.opacity(0.30)],
+            startPoint: .top, endPoint: .bottom
+        )
     }
 
     var body: some View {

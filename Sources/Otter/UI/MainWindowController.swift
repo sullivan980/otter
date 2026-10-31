@@ -42,13 +42,50 @@ final class MainWindowController: NSWindowController {
         win.titlebarAppearsTransparent = true
         win.isMovableByWindowBackground = true
         win.minSize = NSSize(width: 820, height: 560)
-        win.backgroundColor = .windowBackgroundColor
+        // 一体化玻璃窗：透明窗口 + 窗口级毛玻璃 + 圆角遮罩，SwiftUI 内容半透明叠在上面。
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
         win.center()
         win.isReleasedWhenClosed = false
         super.init(window: win)
 
-        win.contentView = NSHostingView(rootView: MainRootView(state: state))
+        let radius: CGFloat = 18
+        let effect = NSVisualEffectView()
+        effect.material = .underWindowBackground
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.maskImage = Self.roundedMask(radius: radius)
+
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.cornerRadius = radius
+        container.layer?.masksToBounds = true
+        effect.autoresizingMask = [.width, .height]
+        effect.frame = container.bounds
+        container.addSubview(effect)
+
+        let host = NSHostingView(rootView: MainRootView(state: state))
+        host.autoresizingMask = [.width, .height]
+        host.frame = container.bounds
+        host.layer?.backgroundColor = NSColor.clear.cgColor
+        container.addSubview(host)
+
+        win.contentView = container
         win.setFrameAutosaveName("OtterMainWindow")
+    }
+
+    /// 窗口圆角遮罩（stretchable，用于 NSVisualEffectView.maskImage）
+    private static func roundedMask(radius: CGFloat) -> NSImage {
+        let edge = radius * 2 + 1
+        let img = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        img.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        img.resizingMode = .stretch
+        return img
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

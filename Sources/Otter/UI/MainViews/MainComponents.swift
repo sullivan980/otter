@@ -18,14 +18,31 @@ struct SidebarMaterial: NSViewRepresentable {
     }
 }
 
+/// 把窗口外观（标题栏/毛玻璃材质）切到主题对应的深浅色。
+struct WindowAppearance: NSViewRepresentable {
+    var isDark: Bool
+    func makeNSView(context: Context) -> NSView {
+        let v = NSView()
+        DispatchQueue.main.async { v.window?.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua) }
+        return v
+    }
+    func updateNSView(_ v: NSView, context: Context) {
+        DispatchQueue.main.async { v.window?.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua) }
+    }
+}
+
 /// 内容区背景：跟随主题渐变。
 struct ContentBackground: View {
     var theme: AppTheme = ThemeStore.shared.theme
     var body: some View {
         theme.gradient
             .overlay(
-                RadialGradient(colors: [theme.accent.opacity(theme.isDark ? 0.16 : 0.10), .clear],
-                               center: .topTrailing, startRadius: 40, endRadius: 640)
+                RadialGradient(colors: [theme.accent.opacity(theme.isDark ? 0.30 : 0.14), .clear],
+                               center: .topTrailing, startRadius: 20, endRadius: 720)
+            )
+            .overlay(
+                RadialGradient(colors: [Color(red: 0.45, green: 0.35, blue: 0.95).opacity(theme.isDark ? 0.18 : 0.06), .clear],
+                               center: .bottomLeading, startRadius: 30, endRadius: 620)
             )
             .ignoresSafeArea()
     }
@@ -81,8 +98,14 @@ struct PanelCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
-                    .fill(theme.panel)
+                ZStack {
+                    if theme.usesMaterial {
+                        RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    }
+                    RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
+                        .fill(theme.panel.opacity(theme.usesMaterial ? 0.60 : 1.0))
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
