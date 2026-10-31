@@ -241,14 +241,18 @@ struct OnboardingView: View {
         }
         .frame(width: 620, height: 480)
         .background(background)
+        .tint(theme.accent)
+        .preferredColorScheme(theme.isDark ? .dark : .light)
     }
 
     // MARK: 背景 / 顶栏 / 底栏
 
+    private var theme: AppTheme { ThemeStore.shared.theme }
+
     private var background: some View {
         ZStack {
-            Color(nsColor: .windowBackgroundColor)
-            LinearGradient(colors: [Color.accentColor.opacity(0.16), Color.clear],
+            theme.gradient
+            LinearGradient(colors: [theme.accent.opacity(0.22), Color.clear],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
         }
         .ignoresSafeArea()

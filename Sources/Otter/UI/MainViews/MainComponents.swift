@@ -18,10 +18,15 @@ struct SidebarMaterial: NSViewRepresentable {
     }
 }
 
-/// 内容区背景（普通窗口底色）。
+/// 内容区背景：跟随主题渐变。
 struct ContentBackground: View {
+    var theme: AppTheme = ThemeStore.shared.theme
     var body: some View {
-        Color(nsColor: .windowBackgroundColor)
+        theme.gradient
+            .overlay(
+                RadialGradient(colors: [theme.accent.opacity(theme.isDark ? 0.16 : 0.10), .clear],
+                               center: .topTrailing, startRadius: 40, endRadius: 640)
+            )
             .ignoresSafeArea()
     }
 }
@@ -69,18 +74,21 @@ struct PanelCard<Content: View>: View {
         self.content = content()
     }
 
+    private var theme: AppTheme { ThemeStore.shared.theme }
+
     var body: some View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
+                    .fill(theme.panel)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
+                RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
+                    .strokeBorder(theme.panelStroke, lineWidth: theme == .paperOtter ? 1.2 : 1)
             )
+            .shadow(color: .black.opacity(theme == .paperOtter ? 0 : 0.07), radius: 8, y: 3)
     }
 }
 
@@ -362,8 +370,8 @@ struct BottomBar<Content: View>: View {
         .padding(.vertical, 12)
         .background(
             Rectangle()
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
-                .overlay(Rectangle().fill(Color.primary.opacity(0.06)).frame(height: 1), alignment: .top)
+                .fill(ThemeStore.shared.theme.panel.opacity(0.94))
+                .overlay(Rectangle().fill(ThemeStore.shared.theme.panelStroke).frame(height: 1), alignment: .top)
         )
     }
 }

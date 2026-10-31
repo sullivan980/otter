@@ -14,6 +14,7 @@ final class Prefs {
         case launchAtLogin
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
         case notificationsEnabled
+        case appTheme           // A | B | C | D | E（默认 E 水波玻璃）
     }
 
     private func bool(_ k: Key, default def: Bool) -> Bool {
@@ -42,6 +43,12 @@ final class Prefs {
     var launchAtLogin: Bool { get { bool(.launchAtLogin, default: false) } set { d.set(newValue, forKey: Key.launchAtLogin.rawValue) } }
 
     var notificationsEnabled: Bool { get { bool(.notificationsEnabled, default: true) } set { d.set(newValue, forKey: Key.notificationsEnabled.rawValue) } }
+
+    /// 主题（A–E），默认 E 水波玻璃。
+    var appTheme: String {
+        get { d.string(forKey: Key.appTheme.rawValue) ?? "E" }
+        set { d.set(newValue, forKey: Key.appTheme.rawValue) }
+    }
 
     /// 自定义菜单栏的指标顺序（CSV 存储，兼容 dev-shell/dev-ui 约定的 "menuBarOrder" 键）。
     var menuBarOrder: [String] {

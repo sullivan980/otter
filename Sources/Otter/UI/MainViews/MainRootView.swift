@@ -6,6 +6,9 @@ import AppKit
 // 分区状态由根视图持有（@StateObject），切换分区不丢失扫描/清理进度。
 struct MainRootView: View {
     @ObservedObject var state: AppState
+    @ObservedObject private var themeStore = ThemeStore.shared
+
+    private var theme: AppTheme { themeStore.theme }
 
     @StateObject private var clean = CleanViewModel()
     @StateObject private var uninstall = UninstallViewModel()
@@ -14,11 +17,13 @@ struct MainRootView: View {
     var body: some View {
         HStack(spacing: 0) {
             MainSidebar(state: state)
-            Divider()
+            Divider().overlay(theme.panelStroke)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(ContentBackground())
+                .background(ContentBackground(theme: theme))
         }
+        .tint(theme.accent)
+        .preferredColorScheme(theme.isDark ? .dark : .light)
         .ignoresSafeArea(.container, edges: .top)
         .frame(minWidth: 800, minHeight: 540)
     }
@@ -43,6 +48,14 @@ struct MainSidebar: View {
     @ObservedObject var state: AppState
 
     private var current: MainSection { MainSection(rawValue: state.selectedSection) ?? .clean }
+    private var theme: AppTheme { ThemeStore.shared.theme }
+
+    private var sidebarBackground: some View {
+        ZStack {
+            ThemeStore.shared.theme.sidebar
+            if ThemeStore.shared.theme.usesMaterial { SidebarMaterial().opacity(0.55) }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -64,7 +77,7 @@ struct MainSidebar: View {
                 .padding(.bottom, 14)
         }
         .frame(width: 204)
-        .background(SidebarMaterial())
+        .background(sidebarBackground)
     }
 
     private var brand: some View {

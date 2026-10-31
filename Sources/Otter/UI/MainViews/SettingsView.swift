@@ -150,6 +150,9 @@ final class SettingsUIState: ObservableObject {
 
 struct SettingsView: View {
     @ObservedObject var state: AppState
+    @ObservedObject private var themeStore = ThemeStore.shared
+
+    private var theme: AppTheme { themeStore.theme }
     @StateObject private var menu = MenuBarSettings()
     @StateObject private var permissions = PermissionModel()
     @StateObject private var ui = SettingsUIState()
@@ -168,6 +171,7 @@ struct SettingsView: View {
                           subtitle: "菜单栏显示、登录自启、通知、系统权限与 HUD 插件。修改即时生效并持久化。")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    themeSection
                     generalSection
                     menuBarSection
                     PermissionSection(model: permissions)
@@ -187,6 +191,54 @@ struct SettingsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshNotificationStatus()
+        }
+    }
+
+    // MARK: 主题
+
+    private var themeSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 12) {
+                SubHeader(text: "主题", trailing: "默认 水波玻璃")
+
+                ForEach(AppTheme.allCases) { item in
+                    Button {
+                        themeStore.theme = item
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(item.rawValue)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .frame(width: 22, height: 22)
+                                .background(
+                                    RoundedRectangle(cornerRadius: item == .paperOtter ? 4 : 7, style: .continuous)
+                                        .fill(item == theme ? theme.accent : Color.primary.opacity(0.07))
+                                )
+                                .foregroundStyle(item == theme ? (theme.isDark ? Color.black : Color.white) : Color.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name).font(.system(size: 12, weight: .medium))
+                                Text(item.tagline).font(.system(size: 10.5)).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            HStack(spacing: 4) {
+                                ForEach(0..<item.swatches.count, id: \.self) { i in
+                                    Circle()
+                                        .fill(item.swatches[i])
+                                        .frame(width: 10, height: 10)
+                                        .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+                                }
+                            }
+                            if item == theme {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(theme.accent)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 

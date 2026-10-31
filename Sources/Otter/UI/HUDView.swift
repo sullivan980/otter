@@ -27,6 +27,9 @@ struct HUDView: View {
     @ObservedObject var state: AppState
     @ObservedObject private var shell = ShellState.shared
     @ObservedObject private var plugins = PluginStore.shared
+    @ObservedObject private var themeStore = ThemeStore.shared
+
+    private var theme: AppTheme { themeStore.theme }
 
     /// 点操作按钮时回调（HUD 负责收起，壳层负责开主界面）
     var onAction: ((String?) -> Void)? = nil
@@ -57,20 +60,25 @@ struct HUDView: View {
         .padding(.bottom, 12)
         .frame(width: 400, height: 520)
         .background(panelBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: theme.radius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+            RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
+                .strokeBorder(theme.panelStroke, lineWidth: 1)
         )
+        .tint(theme.accent)
+        .preferredColorScheme(theme.isDark ? .dark : .light)
     }
 
     // MARK: - 背景
 
     private var panelBackground: some View {
         ZStack {
-            VisualEffectBackground(material: .popover, blending: .behindWindow)
-            LinearGradient(colors: [Color.white.opacity(0.05), Color.clear],
-                           startPoint: .top, endPoint: .center)
+            if theme.usesMaterial {
+                VisualEffectBackground(material: .popover, blending: .behindWindow)
+            }
+            theme.gradient.opacity(theme.usesMaterial ? 0.55 : 1.0)
+            LinearGradient(colors: [theme.accent.opacity(0.12), Color.clear],
+                           startPoint: .topLeading, endPoint: .center)
         }
     }
 

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Otter 图标提案</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0E1216; color: #E9F1F5; font-family: -apple-system, "PingFang SC", sans-serif; padding: 34px; }
+  h1 { font-size: 24px; letter-spacing: -0.3px; }
+  .sub { color: #8FA6B2; font-size: 13px; margin-top: 8px; line-height: 1.7; }
+  .hint { color: #6ED3E8; font-size: 12.5px; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 26px; }
+  .card { background: #151C22; border: 1px solid #243039; border-radius: 22px; padding: 20px; }
+  .card .top { display: flex; gap: 16px; align-items: flex-start; }
+  .shape { width: 168px; height: 168px; border-radius: 22.37%; overflow: hidden; flex: none; box-shadow: 0 16px 36px rgba(0,0,0,0.45); position: relative; }
+  .shape svg { width: 100%; height: 100%; display: block; }
+  .name { font-size: 16px; font-weight: 650; }
+  .tag { font-size: 10.5px; letter-spacing: 0.14em; color: #6E8794; text-transform: uppercase; margin-bottom: 3px; }
+  .desc { font-size: 12px; color: #9FB3BE; line-height: 1.7; margin-top: 8px; }
+  .sizes { display: flex; align-items: flex-end; gap: 14px; margin-top: 16px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .sizes .s span { font-size: 9px; color: #6E8794; }
+  .sizes .box { border-radius: 22.37%; overflow: hidden; }
+  .sizes .box svg { width: 100%; height: 100%; display: block; }
+  .bar { margin-top: 16px; padding: 10px 14px; background: #0B1014; border-radius: 12px; display: flex; align-items: center; gap: 12px; }
+  .bar .b { font-size: 10px; color: #6E8794; margin-right: auto; }
+  .bar .glyph { width: 20px; height: 20px; }
+  .bar .glyph svg { width: 100%; height: 100%; display: block; }
+  .bar .t { font-size: 11px; color: #C9D8E0; font-variant-numeric: tabular-nums; }
+</style></head><body>
+<h1>Otter 应用图标 · 六个方向</h1>
+<div class="sub">都基于「海獭 + 水 + 干净」。每个方向给出 1024 母版预览、Dock 常见尺寸（128 / 64 / 32 / 16）与菜单栏模板（单色 20pt）。</div>
+<div class="hint">选一个字母回复我；也可以说「A 的脸 + C 的玻璃质感」，我出完整 .icns 与全尺寸资源。</div>
+<div class="grid" id="grid"></div>
+<template id="tpl">
+  <div class="card">
+    <div class="top">
+      <div class="shape">ICON</div>
+      <div><div class="tag"></div><div class="name"></div><div class="desc"></div></div>
+    </div>
+    <div class="sizes">SIZES</div>
+    <div class="bar"><span class="b">菜单栏模板</span><span class="glyph">TEMPLATE</span><span class="t">▣ 20% ▤ 70%</span></div>
+  </div>
+</template>
+<script>  function otterHead(c) {
+    return '<g>'
+      + '<circle cx="162" cy="190" r="48" fill="' + c.ear + '"/>'
+      + '<circle cx="350" cy="190" r="48" fill="' + c.ear + '"/>'
+      + '<circle cx="162" cy="190" r="23" fill="' + c.earIn + '"/>'
+      + '<circle cx="350" cy="190" r="23" fill="' + c.earIn + '"/>'
+      + '<ellipse cx="256" cy="288" rx="132" ry="124" fill="' + c.fur + '"/>'
+      + '<ellipse cx="256" cy="334" rx="84" ry="62" fill="' + c.muzzle + '"/>'
+      + '<circle cx="213" cy="262" r="16" fill="' + c.eye + '"/>'
+      + '<circle cx="299" cy="262" r="16" fill="' + c.eye + '"/>'
+      + '<circle cx="218" cy="256" r="5" fill="#FFFFFF" opacity="0.92"/>'
+      + '<circle cx="304" cy="256" r="5" fill="#FFFFFF" opacity="0.92"/>'
+      + '<path d="M239 314 q17 -14 34 0 q-17 15 -34 0" fill="' + c.eye + '"/>'
+      + '<path d="M256 328 v10" stroke="' + c.eye + ' " stroke-width="5" stroke-linecap="round"/>'
+      + '<path d="M238 350 q18 13 36 0" stroke="' + c.eye + '" stroke-width="5" fill="none" stroke-linecap="round"/>'
+      + '<path d="M198 330 q-20 -5 -32 5 M314 330 q20 -5 32 5" stroke="' + c.whisker + '" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.65"/>'
+      + '</g>';
+  }
+  function ripples(color, y, op) {
+    return '<g stroke="' + color + '" fill="none" stroke-linecap="round" opacity="' + op + '">'
+      + '<path d="M60 ' + y + ' q44 -20 88 0 t88 0 t88 0 t88 0 t40 0" stroke-width="14"/>'
+      + '<path d="M96 ' + (y + 34) + ' q40 -16 80 0 t80 0 t80 0 t80 0" stroke-width="9" opacity="0.55"/>'
+      + '</g>';
+  }
+  var TPL = '<svg viewBox="0 0 32 32" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="10" r="3.2"/><circle cx="23" cy="10" r="3.2"/><path d="M5 17c0-4.4 3.8-7.5 11-7.5S27 12.6 27 17c0 5-4.2 8-11 8s-11-3-11-8z"/><circle cx="12.4" cy="16" r="1" fill="#000" stroke="none"/><circle cx="19.6" cy="16" r="1" fill="#000" stroke="none"/><path d="M14 20.5q2 1.6 4 0"/></svg>';
+  function iconA() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<linearGradient id="aBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12506299"/><stop offset="0.55" stop-color="#0B3746"/><stop offset="1" stop-color="#061E27"/></linearGradient>'
+      + '<linearGradient id="aWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2FB6C9" stop-opacity="0.35"/><stop offset="1" stop-color="#0B3746" stop-opacity="0"/></linearGradient>'
+      + '</defs><rect width="512" height="512" fill="url(#aBg)"/>'
+      + '<circle cx="120" cy="96" r="90" fill="#6ED3E8" opacity="0.10"/><circle cx="430" cy="150" r="120" fill="#2E7D8F" opacity="0.14"/>'
+      + '<rect width="512" height="512" fill="url(#aWater)"/>'
+      + otterHead({ear:"#E7C69F", earIn:"#C99B6E", fur:"#F4DDBB", muzzle:"#FFF4E2", eye:"#2A211C", whisker:"#3A2C24"})
+      + ripples("#6ED3E8", 430, "0.75")
+      + '<circle cx="112" cy="360" r="9" fill="#9FE7F1" opacity="0.5"/><circle cx="146" cy="330" r="5" fill="#9FE7F1" opacity="0.45"/><circle cx="404" cy="352" r="7" fill="#9FE7F1" opacity="0.4"/>'
+      + '</svg>';
+  }
+  function iconB() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<linearGradient id="bBg" x1="0" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#FFF6EA"/><stop offset="0.6" stop-color="#F6E3CB"/><stop offset="1" stop-color="#EBCBA4"/></linearGradient>'
+      + '</defs><rect width="512" height="512" fill="url(#bBg)"/>'
+      + '<circle cx="100" cy="120" r="54" fill="#FFFFFF" opacity="0.55"/><circle cx="410" cy="200" r="70" fill="#FFFFFF" opacity="0.4"/><circle cx="360" cy="96" r="24" fill="#FFFFFF" opacity="0.55"/>'
+      + '<path d="M150 90 q26 -40 52 0" stroke="#D9B58C" stroke-width="9" fill="none" stroke-linecap="round" opacity="0.7"/>'
+      + otterHead({ear:"#7E4E33", earIn:"#5F3824", fur:"#8C5B3C", muzzle:"#F7E4CC", eye:"#2B1C12", whisker:"#4A2E1D"})
+      + '<rect x="186" y="196" width="140" height="24" rx="12" fill="#FFFBF2" opacity="0.96"/>'
+      + ripples("#C98A52", 430, "0.35")
+      + '<circle cx="128" cy="384" r="12" fill="#FFFFFF" opacity="0.65"/><circle cx="398" cy="372" r="9" fill="#FFFFFF" opacity="0.55"/>'
+      + '</svg>';
+  }
+  function iconC() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<linearGradient id="cBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B2E44"/><stop offset="0.55" stop-color="#081E2D"/><stop offset="1" stop-color="#05131C"/></linearGradient>'
+      + '<radialGradient id="cAur" cx="0.2" cy="0.1" r="0.9"><stop offset="0" stop-color="#6ED3E8" stop-opacity="0.5"/><stop offset="1" stop-color="#6ED3E8" stop-opacity="0"/></radialGradient>'
+      + '<radialGradient id="cAur2" cx="0.9" cy="0.9" r="0.8"><stop offset="0" stop-color="#A78BFA" stop-opacity="0.4"/><stop offset="1" stop-color="#A78BFA" stop-opacity="0"/></radialGradient>'
+      + '</defs><rect width="512" height="512" fill="url(#cBg)"/><rect width="512" height="512" fill="url(#cAur)"/><rect width="512" height="512" fill="url(#cAur2)"/>'
+      + '<g opacity="0.94">' + otterHead({ear:"#CFEFF5", earIn:"#9FD7E2", fur:"#EAFBFD", muzzle:"#FFFFFF", eye:"#0B2B36", whisker:"#6F9AA6"}) + '</g>'
+      + ripples("#6ED3E8", 434, "0.65")
+      + '<circle cx="256" cy="288" r="132" fill="none" stroke="#6ED3E8" stroke-width="2" opacity="0.25"/>'
+      + '</svg>';
+  }
+  function iconD() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<pattern id="dDots" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1" fill="#2B2A26" opacity="0.10"/></pattern>'
+      + '</defs><rect width="512" height="512" fill="#F4EEDF"/><rect width="512" height="512" fill="url(#dDots)"/>'
+      + '<g fill="none" stroke="#2B2A26" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">'
+      + '<circle cx="162" cy="190" r="44"/><circle cx="350" cy="190" r="44"/>'
+      + '<path d="M124 292c0-72 58-116 132-116s132 44 132 116c0 64-56 106-132 106s-132-42-132-106z"/>'
+      + '</g>'
+      + '<ellipse cx="256" cy="334" rx="80" ry="58" fill="#FBF6EA" stroke="#2B2A26" stroke-width="8"/>'
+      + '<circle cx="214" cy="262" r="13" fill="#2B2A26"/><circle cx="298" cy="262" r="13" fill="#2B2A26"/>'
+      + '<path d="M241 314 q15 -12 30 0 q-15 13 -30 0" fill="#2B2A26"/>'
+      + '<path d="M256 326 v10 M240 348 q16 12 32 0" stroke="#2B2A26" stroke-width="7" fill="none" stroke-linecap="round"/>'
+      + '<path d="M92 430 q40 -20 80 0 t80 0 t80 0 t80 0" stroke="#3F6B5A" stroke-width="12" fill="none" stroke-linecap="round"/>'
+      + '</svg>';
+  }
+  function iconE() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<linearGradient id="eBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E7D8F"/><stop offset="0.6" stop-color="#1D5A69"/><stop offset="1" stop-color="#123E4A"/></linearGradient>'
+      + '</defs><rect width="512" height="512" fill="url(#eBg)"/>'
+      + '<circle cx="256" cy="268" r="152" fill="none" stroke="#F4EDDC" stroke-width="52"/>'
+      + '<g transform="translate(256 268) scale(0.52) translate(-256 -288)">' + otterHead({ear:"#F4E3C8", earIn:"#DCC29F", fur:"#F4E3C8", muzzle:"#FFF7E8", eye:"#123E4A", whisker:"#9A7F5F"}) + '</g>'
+      + '<path d="M64 452 q48 -22 96 0 t96 0 t96 0 t96 0" stroke="#8FE3F2" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.8"/>'
+      + '</svg>';
+  }
+  function iconF() {
+    return '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs>'
+      + '<linearGradient id="fBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A2A3A"/><stop offset="1" stop-color="#05141C"/></linearGradient>'
+      + '<linearGradient id="fDrop" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#8FE7F4"/><stop offset="1" stop-color="#2E8FA8"/></linearGradient>'
+      + '<clipPath id="fClip"><path d="M256 58c74 96 132 158 132 232 0 88-60 148-132 148s-132-60-132-148c0-74 58-136 132-232z"/></clipPath>'
+      + '</defs><rect width="512" height="512" fill="url(#fBg)"/>'
+      + '<path d="M256 58c74 96 132 158 132 232 0 88-60 148-132 148s-132-60-132-148c0-74 58-136 132-232z" fill="url(#fDrop)" opacity="0.22"/>'
+      + '<g clip-path="url(#fClip)" opacity="0.95">' + otterHead({ear:"#D9B98F", earIn:"#B8946A", fur:"#EBD2AC", muzzle:"#FFF3DC", eye:"#0A2A3A", whisker:"#7A5E42"}) + '</g>'
+      + '<path d="M256 58c74 96 132 158 132 232 0 88-60 148-132 148s-132-60-132-148c0-74 58-136 132-232z" fill="none" stroke="#BFF2FA" stroke-width="3" opacity="0.5"/>'
+      + ripples("#8FE7F4", 456, "0.5")
+      + '</svg>';
+  }
+  var ICONS = [
+    { l: "A", name: "浮水獭", tag: "FLOATING", svg: iconA(), desc: "海獭浮在水面，水线在下方。最直观的「水獭 + 水」，亲和、可识别，适合做默认图标。" },
+    { l: "B", name: "温泉獭", tag: "ONSEN", svg: iconB(), desc: "热汤色背景 + 头上小毛巾 + 气泡。强调「爱干净/泡澡」，最可爱、最有故事性。" },
+    { l: "C", name: "玻璃獭", tag: "GLASS", svg: iconC(), desc: "深色玻璃质感、青色环境光，海獭像浮在深水里。和 E 主题（默认水波玻璃）最搭。" },
+    { l: "D", name: "纸獭", tag: "PAPER", svg: iconD(), desc: "米纸 + 墨线 + 绿色水波，像一枚认真画的手账贴纸。最克制，适合喜欢 D 主题的人。" },
+    { l: "E", name: "字母 O 獭", tag: "MONOGRAM", svg: iconE(), desc: "大 O 环 + 环里的獭脸：既是 Otter 的首字母，也是水圈。Dock 里 32px 也认得出。" },
+    { l: "F", name: "水滴獭", tag: "DROPLET", svg: iconF(), desc: "海獭装在一颗水滴里，水滴本身就是「水 + 干净」。最适合黑白/单色场景，也最好缩小。" }
+  ];
+  var grid = document.getElementById("grid");
+  var tpl = document.getElementById("tpl");
+  ICONS.forEach(function (it) {
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    node.querySelector(".tag").textContent = it.tag + " · " + it.l;
+    node.querySelector(".name").textContent = it.name;
+    node.querySelector(".desc").textContent = it.desc;
+    node.querySelector(".shape").innerHTML = it.svg;
+    var sizes = node.querySelector(".sizes");
+    [128, 64, 32, 16].forEach(function (px) {
+      var d = document.createElement("div"); d.className = "s";
+      var b = document.createElement("div"); b.className = "box"; b.style.width = px + "px"; b.style.height = px + "px";
+      b.innerHTML = it.svg;
+      var lab = document.createElement("span"); lab.textContent = px;
+      d.appendChild(b); d.appendChild(lab); sizes.appendChild(d);
+    });
+    node.querySelector(".glyph").innerHTML = TPL;
+    grid.appendChild(node);
+  });
+</script></body></html>

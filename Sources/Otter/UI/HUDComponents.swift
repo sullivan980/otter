@@ -275,17 +275,19 @@ struct HUDCard<Content: View>: View {
     var padding: CGFloat = 12
     @ViewBuilder var content: () -> Content
 
+    private var theme: AppTheme { ThemeStore.shared.theme }
+
     var body: some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(Color.primary.opacity(0.055))
+                RoundedRectangle(cornerRadius: max(6, theme.radius - 4), style: .continuous)
+                    .fill(theme.panel)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
+                RoundedRectangle(cornerRadius: max(6, theme.radius - 4), style: .continuous)
+                    .strokeBorder(theme.panelStroke, lineWidth: 1)
             )
     }
 }
