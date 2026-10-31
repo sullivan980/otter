@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Otter 图标 v6 · 实拍海獭</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0B0F13; color: #E9F1F5; font-family: -apple-system, "PingFang SC", sans-serif; padding: 34px; }
+  h1 { font-size: 24px; }
+  .sub { color: #8FA6B2; font-size: 13px; margin-top: 8px; line-height: 1.7; max-width: 1020px; }
+  .hint { color: #6ED3E8; font-size: 12.5px; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px; }
+  .card { background: #141B21; border: 1px solid #232F38; border-radius: 20px; padding: 18px; }
+  .top { display: flex; gap: 16px; align-items: flex-start; }
+  .shape { width: 172px; height: 172px; border-radius: 22.37%; overflow: hidden; flex: none; box-shadow: 0 14px 34px rgba(0,0,0,0.55); position: relative; }
+  .shape img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tag { font-size: 10px; letter-spacing: 0.16em; color: #6E8794; text-transform: uppercase; margin-bottom: 3px; }
+  .name { font-size: 15px; font-weight: 650; } .desc { font-size: 11.5px; color: #9FB3BE; line-height: 1.65; margin-top: 7px; }
+  .sizes { display: flex; align-items: flex-end; gap: 13px; margin-top: 14px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sizes .s span { font-size: 8.5px; color: #6E8794; }
+  .sizes .box { border-radius: 22.37%; overflow: hidden; } .sizes img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .credit { color: #5E7480; font-size: 10px; margin-top: 9px; }
+  .bar { margin-top: 14px; padding: 9px 13px; background: #0A0F13; border-radius: 11px; display: flex; align-items: center; gap: 12px; }
+  .bar .b { font-size: 9.5px; color: #6E8794; margin-right: auto; }
+  .bar .glyph { width: 19px; height: 19px; } .bar svg { width: 100%; height: 100%; display: block; }
+  .bar .t { font-size: 10.5px; color: #C9D8E0; }
+  .glass { position: relative; }
+  .glass::after { content: ""; position: absolute; inset: 0; border-radius: 22.37%; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.20), inset 0 1px 12px rgba(255,255,255,0.25); }
+</style></head><body>
+<h1>Otter 图标 · 实拍海獭方向（v6）</h1>
+<div class="sub">按你搜到的照片质感做的四枚：真实皮毛、湿亮高光、浮在水面。P1 是公有领域（USFWS），可直接用；P2 是 CC BY-SA 2.0（署名 Marshal Hedin），P3/P4 是 P2 的调色变体。</div>
+<div class="hint">回字母即可。照片图标在 16px 会自然糊掉，这是照片路线的固有代价；如果你要 16px 也清楚，还是得回到符号/插画路线。</div>
+<div class="grid" id="grid"></div>
+<template id="tpl"><div class="card"><div class="top"><div class="shape">IMG</div>
+<div><div class="tag"></div><div class="name"></div><div class="desc"></div><div class="credit"></div></div></div>
+<div class="sizes">SIZES</div>
+<div class="bar"><span class="b">菜单栏模板</span><span class="glyph">TPL</span><span class="t">▣ 20% ▤ 70%</span></div>
+</div></template>
+<script>
+var TPL = '<svg viewBox="0 0 32 32" fill="#000" xmlns="http://www.w3.org/2000/svg"><path d="M6 16c0-5 4.5-9 10-9 2.6 0 5 .9 6.7 2.4 2.2 0 3.8 1.7 3.8 4 0 2.2-1.5 3.8-3.6 4.1-1.4 2.9-4 4.5-7 4.5-5.5 0-9.9-3.4-9.9-6z"/></svg>';
+var ICONS = [
+  { l: "P1", name: "浮水面 · 实拍", tag: "PHOTO · PD", src: "assets/otter-pd.jpg", credit: "Photo: David Menke / USFWS · Public Domain", desc: "海獭只露头和两只爪子，背景是深色水面。最像你搜到的那类照片，且是公有领域，可放心用。" },
+  { l: "P2", name: "仰泳特写 · 实拍", tag: "PHOTO · CC BY-SA", src: "assets/otter-cc.jpg", credit: "Photo: Marshal Hedin / Wikimedia Commons · CC BY-SA 2.0", desc: "仰泳特写：湿毛质感、阳光、肚皮和爪子都清楚。最有「海獭」味，但 16px 会糊。" },
+  { l: "P3", name: "青调双色", tag: "DUOTONE", src: "assets/otter-cc-duotone.jpg", credit: "Photo: Marshal Hedin / CC BY-SA 2.0 · duotone", desc: "把 P2 压成青蓝-奶油双色调，和默认 E 玻璃主题统一，少了图库感。" },
+  { l: "P4", name: "实拍 + 玻璃边", tag: "PHOTO + GLASS", src: "assets/otter-cc.jpg", glass: true, credit: "Photo: Marshal Hedin / CC BY-SA 2.0 · glass rim", desc: "照片外圈加玻璃高光和内阴影，接近 macOS 26 的图标语言。" }
+];
+var grid = document.getElementById("grid");
+var tpl = document.getElementById("tpl");
+ICONS.forEach(function (it) {
+  var node = tpl.content.firstElementChild.cloneNode(true);
+  node.querySelector(".tag").textContent = it.tag + " · " + it.l;
+  node.querySelector(".name").textContent = it.name;
+  node.querySelector(".desc").textContent = it.desc;
+  node.querySelector(".credit").textContent = it.credit;
+  function make(size, cls) {
+    var box = document.createElement("div");
+    box.style.width = size + "px"; box.style.height = size + "px";
+    box.style.borderRadius = "22.37%"; box.style.overflow = "hidden"; box.style.position = "relative";
+    if (cls) box.className = cls;
+    var img = document.createElement("img"); img.src = it.src;
+    box.appendChild(img);
+    return box;
+  }
+  var big = node.querySelector(".shape"); big.innerHTML = ""; big.appendChild(make(172, it.glass ? "glass" : ""));
+  var sizes = node.querySelector(".sizes");
+  [128, 64, 32, 16].forEach(function (px) {
+    var d = document.createElement("div"); d.className = "s";
+    d.appendChild(make(px, it.glass ? "glass" : ""));
+    var lab = document.createElement("span"); lab.textContent = px;
+    d.appendChild(lab); sizes.appendChild(d);
+  });
+  node.querySelector(".glyph").innerHTML = TPL;
+  grid.appendChild(node);
+});
+</script></body></html>
