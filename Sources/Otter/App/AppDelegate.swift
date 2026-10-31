@@ -15,6 +15,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "notify":
+                var done = false
+                var json = "{}"
+                Notifications.shared.diagnose { out in json = out; done = true }
+                let deadline = Date().addingTimeInterval(6)
+                while !done && Date() < deadline {
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+                }
+                if let out = ProcessInfo.processInfo.environment["OTTER_SELFTEST_OUT"], !out.isEmpty {
+                    try? json.write(toFile: out, atomically: true, encoding: .utf8)
+                }
+                print(json)
             case "plugins":
                 print(PluginStore.shared.selfTestJSON())
             case "login-status":

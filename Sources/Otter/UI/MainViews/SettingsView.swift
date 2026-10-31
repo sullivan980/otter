@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Foundation
+import UserNotifications
 
 // MARK: - 菜单栏设置状态
 //
@@ -143,6 +144,7 @@ final class SettingsUIState: ObservableObject {
     @Published var launchAtLogin: Bool = Prefs.shared.launchAtLogin
     @Published var loginActual: Bool = LoginItem.isEnabled
     @Published var notificationsEnabled: Bool = Prefs.shared.notificationsEnabled
+    @Published var notificationStatus: UNAuthorizationStatus = .notDetermined
     @Published var toast: String?
 }
 
@@ -181,6 +183,10 @@ struct SettingsView: View {
             permissions.autoCheckIfNeeded()
             refreshLoginActual()
             ui.notificationsEnabled = Prefs.shared.notificationsEnabled
+            refreshNotificationStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshNotificationStatus()
         }
     }
 
@@ -218,9 +224,21 @@ struct SettingsView: View {
                 Divider()
 
                 settingRow(title: "系统通知",
-                           desc: "清理或卸载完成后发送通知（需系统授权）。") {
+                           desc: notificationDescription) {
                     HStack(spacing: 8) {
+                        if ui.notificationStatus == .denied {
+                            Button("打开通知设置") {
+                                Notifications.shared.openSystemSettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
                         Button("发送测试") {
+                            if ui.notificationStatus == .denied {
+                                ui.toast = "系统拒绝了原生通知：已用脚本通知投递；也可在「通知」设置里允许 Otter。"
+                            } else {
+                                ui.toast = "已发送测试通知（若没看到横幅，请检查系统通知设置）。"
+                            }
                             Notifications.shared.post(title: "Otter 通知测试",
                                                       body: "通知已开启，清理与卸载完成后会在这里提醒你。")
                         }
@@ -274,6 +292,24 @@ struct SettingsView: View {
         let actual = LoginItem.isEnabled
         if ui.loginActual != actual { ui.loginActual = actual }
         if ui.launchAtLogin == actual { ui.toast = nil }
+    }
+
+    private var notificationDescription: String {
+        switch ui.notificationStatus {
+        case .denied:
+            return "系统拒绝了原生通知（未签名构建常见）：Otter 会自动用脚本方式投递，仍能收到横幅；点「打开通知设置」可尝试允许 Otter。"
+        case .authorized, .provisional, .ephemeral:
+            return "清理或卸载完成后发送通知。"
+        default:
+            return "清理或卸载完成后发送通知（需系统授权）。"
+        }
+    }
+
+    private func refreshNotificationStatus() {
+        Notifications.shared.authorizationStatus { status in
+            if ui.notificationStatus != status { ui.notificationStatus = status }
+            if status == .denied { ui.notificationsEnabled = false }
+        }
     }
 
     private var notificationBinding: Binding<Bool> {

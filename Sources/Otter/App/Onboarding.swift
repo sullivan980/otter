@@ -8,6 +8,7 @@ import UserNotifications
 final class OnboardingController: NSObject, NSWindowDelegate {
     static let shared = OnboardingController()
     static let completedKey = "otterOnboarded"
+    static let installStampKey = "otterInstallStamp"
 
     static var hasCompleted: Bool { UserDefaults.standard.bool(forKey: completedKey) }
     static func markCompleted() { UserDefaults.standard.set(true, forKey: completedKey) }
@@ -16,8 +17,25 @@ final class OnboardingController: NSObject, NSWindowDelegate {
 
     private override init() { super.init() }
 
+    /// 安装指纹：应用包路径 + 创建时间 + 版本。
+    /// UserDefaults 在「拖到废纸篓再装回来」后仍会保留，单靠 otterOnboarded 判断不出重装，
+    /// 用 .app 的创建时间/路径变化识别新安装，重装后重新走一次引导。
+    static func currentInstallStamp() -> String {
+        let url = Bundle.main.bundleURL
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let created = (attrs?[.creationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        return "\(url.path)|\(Int(created))|\(version)"
+    }
+
     /// AppDelegate 启动时调用；已完成或带 OTTER_NO_ONBOARD=1 时静默跳过
     func showIfNeeded() {
+        let stamp = Self.currentInstallStamp()
+        let saved = UserDefaults.standard.string(forKey: Self.installStampKey)
+        if saved != stamp {
+            UserDefaults.standard.set(stamp, forKey: Self.installStampKey)
+            UserDefaults.standard.set(false, forKey: Self.completedKey)
+        }
         guard !Self.hasCompleted else { return }
         guard ProcessInfo.processInfo.environment["OTTER_NO_ONBOARD"] == nil else { return }
         // 稍等菜单栏初始化完成再弹，避免抢主线程
@@ -155,6 +173,15 @@ final class OnboardingModel: ObservableObject {
     func requestNotifications() {
         Notifications.shared.requestAuthorization { [weak self] _ in
             self?.refreshPermissions()
+        }
+    }
+
+    /// 通知按钮：只在「未请求」时弹系统授权；已拒绝/已授权都去系统设置（被拒后系统不会再弹窗）
+    func handleNotificationPermission() {
+        if notificationStatus == .notDetermined {
+            requestNotifications()
+        } else {
+            openNotificationSettings()
         }
     }
 
@@ -424,17 +451,13 @@ struct OnboardingView: View {
             permissionCard(
                 icon: "bell.badge",
                 title: "系统通知",
-                detail: "清理 / 卸载完成后发系统横幅，不用盯着窗口。",
+                detail: model.notificationStatus == .denied
+                    ? "系统拒绝了原生通知（未签名构建常见）；Otter 会自动改用脚本通知，也可去「通知」设置里允许 Otter。"
+                    : "清理 / 卸载完成后发系统横幅，不用盯着窗口。",
                 granted: permissionGranted,
                 statusText: notificationStatusText,
-                primaryTitle: permissionGranted ? "打开通知设置" : "请求通知",
-                primaryAction: {
-                    if permissionGranted {
-                        model.openNotificationSettings()
-                    } else {
-                        model.requestNotifications()
-                    }
-                },
+                primaryTitle: model.notificationStatus == .notDetermined ? "请求通知" : "打开通知设置",
+                primaryAction: { model.handleNotificationPermission() },
                 secondaryTitle: "重新检测",
                 secondaryAction: { model.refreshPermissions() }
             )
