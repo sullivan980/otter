@@ -8,7 +8,7 @@
 | 版本 | 0.2.0 / build 1，arm64-apple-macos13.0，LSUIElement=true |
 | 验收命令 | ./scripts/verify.sh --no-build（快速采样；此前 --full 正式采样已跑） |
 | 最终退出码 | 0（全部检查项通过） |
-| 证据目录 | /tmp/otter2-evidence/verify/、/tmp/t5-verify-final.log、/tmp/t5-verify-full2.log、/tmp/t5-tests.log、/tmp/t5-boot-*.json |
+| 证据目录 | /tmp/otter2-evidence/verify/、/tmp/t5-verify-final.log、/tmp/t5-verify-full2.log、/tmp/t5-tests.log、/tmp/t5-boot-*.json、/tmp/otter2-shots/*.png |
 
 ## 1. 汇总
 
@@ -63,7 +63,7 @@
 4. 首启引导/深浅色/多显示器/24h 稳定性/VoiceOver：本轮未自动化，发布前人工走查。
 5. 并发构建：团队并行构建会导致 swiftc 被 SIGTERM 或 modified during build，verify 已内置 3 次并发重试与 600s 脚本级保护；最终验收在稳定产物上重跑通过。
 6. 旧项目只读：otter/ 的 git 工作区存在既有改动（M src-tauri/src/main.rs、?? REQUIREMENTS.md、?? PRODUCT_REVIEW.md），为本次任务前已存在；T5 全程未写 otter/。
-7. screenshot.sh：脚本已支持 HUD/四分区/菜单栏批量截图，但本机 LaunchServices --args 不传参；需改用 flags 文件方式（待最后一步小修）。本轮界面证据采用 Lead 手工截图：/tmp/o2-shots/clean-done2.png、sec-uninstall.png、sec-disk.png、sec-settings.png。
+7. screenshot.sh 已改为 /tmp/otter-test-flags.json 启动方式并实测通过：6/6 成功，输出 /tmp/otter2-shots/{hud.png, menu-bar.png, main-clean.png, main-uninstall.png, main-disk.png, main-settings.png}；另有 Lead 手工截图 /tmp/o2-shots/clean-done2.png 等可交叉核对。
 
 ## 5. 复跑命令
 
