@@ -52,7 +52,7 @@ struct PluginSection: View {
                     .controlSize(.small)
                 }
 
-                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。安装后立即启用并在 HUD 生效；内置插件不可删除，同 id 用户插件会覆盖内置。")
+                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。安装后立即启用并在 HUD 生效；内置插件不可删除，用户插件不能与内置插件同 id（会被拒绝）。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
