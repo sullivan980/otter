@@ -64,6 +64,7 @@
 5. 并发构建：团队并行构建会导致 swiftc 被 SIGTERM 或 modified during build，verify 已内置 3 次并发重试与 600s 脚本级保护；最终验收在稳定产物上重跑通过。
 6. 旧项目只读：otter/ 的 git 工作区存在既有改动（M src-tauri/src/main.rs、?? REQUIREMENTS.md、?? PRODUCT_REVIEW.md），为本次任务前已存在；T5 全程未写 otter/。
 7. screenshot.sh 已改为 /tmp/otter-test-flags.json 启动方式并实测通过：6/6 成功，输出 /tmp/otter2-shots/{hud.png, menu-bar.png, main-clean.png, main-uninstall.png, main-disk.png, main-settings.png}；另有 Lead 手工截图 /tmp/o2-shots/clean-done2.png 等可交叉核对。
+   ⚠️ 更正（Lead 复核）：menu-bar.png 实际截到的是全屏 App 的顶部条（本机显示器被全屏应用占用、macOS 菜单栏隐藏），不能作为菜单栏外观证据；菜单栏外观改以离屏渲染证据为准：/tmp/o2-menubar-{light,dark}-{dual,single}.png（280×56 @2x，真实 NSStatusItem 标题渲染，含模板图标与深浅色），实机菜单栏外观仍需普通 Space 下人工确认。
 
 ## 5. 复跑命令
 
