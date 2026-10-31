@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Otter 图标提案 v2 · 场景版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0E1216; color: #E9F1F5; font-family: -apple-system, "PingFang SC", sans-serif; padding: 34px; }
+  h1 { font-size: 24px; letter-spacing: -0.3px; }
+  .sub { color: #8FA6B2; font-size: 13px; margin-top: 8px; line-height: 1.7; max-width: 1000px; }
+  .hint { color: #6ED3E8; font-size: 12.5px; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 24px; }
+  .card { background: #151C22; border: 1px solid #243039; border-radius: 22px; padding: 20px; }
+  .top { display: flex; gap: 16px; align-items: flex-start; }
+  .shape { width: 176px; height: 176px; border-radius: 22.37%; overflow: hidden; flex: none; box-shadow: 0 16px 36px rgba(0,0,0,0.45); }
+  .shape svg { width: 100%; height: 100%; display: block; }
+  .tag { font-size: 10.5px; letter-spacing: 0.14em; color: #6E8794; text-transform: uppercase; margin-bottom: 3px; }
+  .name { font-size: 16px; font-weight: 650; }
+  .desc { font-size: 12px; color: #9FB3BE; line-height: 1.7; margin-top: 8px; }
+  .sizes { display: flex; align-items: flex-end; gap: 14px; margin-top: 16px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .sizes .s span { font-size: 9px; color: #6E8794; }
+  .sizes .box { border-radius: 22.37%; overflow: hidden; }
+  .sizes .box svg { width: 100%; height: 100%; display: block; }
+  .bar { margin-top: 16px; padding: 10px 14px; background: #0B1014; border-radius: 12px; display: flex; align-items: center; gap: 12px; }
+  .bar .b { font-size: 10px; color: #6E8794; margin-right: auto; }
+  .bar .glyph { width: 20px; height: 20px; }
+  .bar .glyph svg { width: 100%; height: 100%; display: block; }
+  .bar .t { font-size: 11px; color: #C9D8E0; }
+</style></head><body>
+<h1>Otter 图标 · 场景版（v2）</h1>
+<div class="sub">不再只做獭脸：仰泳抱鱼、搓澡、深潜、泡汤、尾巴卷成 O、墨线游獭——每个都是一件"海獭在干净水里"的小场景。每个方向仍给 Dock 128/64/32/16 与菜单栏模板。</div>
+<div class="hint">回字母即可（可组合，如「A + E 的尾巴」）；定了我出 .icns 全尺寸并替换应用图标。</div>
+<div class="grid" id="grid"></div>
+<template id="tpl"><div class="card"><div class="top"><div class="shape">ICON</div>
+<div><div class="tag"></div><div class="name"></div><div class="desc"></div></div></div>
+<div class="sizes">SIZES</div>
+<div class="bar"><span class="b">菜单栏模板</span><span class="glyph">TPL</span><span class="t">▣ 20% ▤ 70%</span></div>
+</div></template>
+<script src="icons-v2.js"></script>
+<script src="icons-v2-part2.js"></script>
