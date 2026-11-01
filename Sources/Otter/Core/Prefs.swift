@@ -9,7 +9,9 @@ final class Prefs {
         case menuBarPreset        // minimal | dual | single | custom
         case showCPU, showMem, showDisk, showUp, showDown
         case colorByLoad          // 是否按负载着色（默认关）
-        case singleMetric         // cpu | mem | disk | up | down
+        case singleMetric         // cpu | mem | disk（保留兼容）
+        case menuBarShowIcon       // 菜单栏是否显示獭图标（默认不显示）
+        case menuBarStyle          // 菜单栏样式插件 id（默认 value）
         case hudStyle             // 插件 id（0.4 起默认 n2）
         case launchAtLogin
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
@@ -25,7 +27,7 @@ final class Prefs {
     }
 
     var menuBarPreset: String {
-        get { d.string(forKey: Key.menuBarPreset.rawValue) ?? "dual" }
+        get { d.string(forKey: Key.menuBarPreset.rawValue) ?? "custom" }
         set { d.set(newValue, forKey: Key.menuBarPreset.rawValue) }
     }
     var showCPU: Bool { get { bool(.showCPU, default: true) } set { d.set(newValue, forKey: Key.showCPU.rawValue) } }
@@ -38,6 +40,12 @@ final class Prefs {
         get { d.string(forKey: Key.singleMetric.rawValue) ?? "cpu" }
         set { d.set(newValue, forKey: Key.singleMetric.rawValue) }
     }
+    var menuBarShowIcon: Bool { get { bool(.menuBarShowIcon, default: false) } set { d.set(newValue, forKey: Key.menuBarShowIcon.rawValue) } }
+    var menuBarStyle: String {
+        get { d.string(forKey: Key.menuBarStyle.rawValue) ?? "value" }
+        set { d.set(newValue, forKey: Key.menuBarStyle.rawValue) }
+    }
+
     var hudStyle: String {
         get { d.string(forKey: Key.hudStyle.rawValue) ?? "n2" }
         set { d.set(newValue, forKey: Key.hudStyle.rawValue) }
@@ -65,13 +73,13 @@ final class Prefs {
     /// 自定义菜单栏的指标顺序（CSV 存储，兼容 dev-shell/dev-ui 约定的 "menuBarOrder" 键）。
     var menuBarOrder: [String] {
         get {
-            let raw = d.string(forKey: Key.menuBarOrder.rawValue) ?? "cpu,mem,disk,up,down"
+            let raw = d.string(forKey: Key.menuBarOrder.rawValue) ?? "cpu,mem,disk"
             let ids = raw.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
-            let valid = ids.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
-            return valid.isEmpty ? ["cpu", "mem", "disk", "up", "down"] : valid
+            let valid = ids.filter { ["cpu", "mem", "disk"].contains($0) }
+            return valid.isEmpty ? ["cpu", "mem", "disk"] : valid
         }
         set {
-            let valid = newValue.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
+            let valid = newValue.filter { ["cpu", "mem", "disk"].contains($0) }
             d.set(valid.joined(separator: ","), forKey: Key.menuBarOrder.rawValue)
         }
     }

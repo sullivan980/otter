@@ -152,6 +152,8 @@ final class StatusBarController: NSObject {
             String(m.isReady),
             appearance.rawValue,
             String(state.isPaused),
+            String(Prefs.shared.menuBarShowIcon),
+            Prefs.shared.menuBarStyle,
             Self.prefsSignature(),
         ].joined(separator: "|")
         guard force || signature != lastSignature else { return }
@@ -167,8 +169,8 @@ final class StatusBarController: NSObject {
             return
         }
 
-        // 菜单栏始终带一枚獭图标，指标文字跟在后面（和引导里「点一下獭图标」一致）
-        button.image = MenuBarGlyph.brandTemplate()
+        // 獭图标可关（默认关）；关闭后只显示指标文字。
+        button.image = Prefs.shared.menuBarShowIcon ? MenuBarGlyph.brandTemplate() : nil
         button.imagePosition = .imageLeading
         item.length = NSStatusItem.variableLength
 
@@ -201,8 +203,6 @@ final class StatusBarController: NSObject {
                 .cpu: Prefs.shared.showCPU,
                 .mem: Prefs.shared.showMem,
                 .disk: Prefs.shared.showDisk,
-                .up: Prefs.shared.showUp,
-                .down: Prefs.shared.showDown,
             ]
             let order = Prefs.shared.menuBarOrder.compactMap { MetricKind.parse($0) }
             let picked = order.filter { enabled[$0] == true }
@@ -231,11 +231,22 @@ final class StatusBarController: NSObject {
                            trend: trend,
                            metrics: metrics,
                            labelColor: MenuBarGlyph.currentLabelColor(),
-                           colorByLoad: Prefs.shared.colorByLoad) ?? NSAttributedString(string: "")
+                           colorByLoad: Prefs.shared.colorByLoad,
+                           style: MenuBarStyleStore.shared.style) ?? NSAttributedString(string: "")
+    }
+
+    /// 验收辅助：按指定样式生成标题（自测用，不影响线上）。
+    static func previewTitle(kinds: [MetricKind], style: MenuBarStyle, metrics: SystemMetrics) -> String {
+        (fittedTitle(kinds: kinds,
+                     trend: nil,
+                     metrics: metrics,
+                     labelColor: MenuBarGlyph.currentLabelColor(),
+                     colorByLoad: false,
+                     style: style)?.string) ?? ""
     }
 
     /// 按预算逐级降级，返回第一条放得下的标题
-    static func fittedTitle(kinds: [MetricKind], trend: MetricKind?, metrics m: SystemMetrics, labelColor: NSColor, colorByLoad: Bool) -> NSAttributedString? {
+    static func fittedTitle(kinds: [MetricKind], trend: MetricKind?, metrics m: SystemMetrics, labelColor: NSColor, colorByLoad: Bool, style: MenuBarStyle? = nil) -> NSAttributedString? {
         var candidates: [(kinds: [MetricKind], withTrend: Bool)] = []
         if trend != nil {
             candidates.append((kinds, true))
@@ -254,7 +265,8 @@ final class StatusBarController: NSObject {
                                       trend: c.withTrend ? trend : nil,
                                       metrics: m,
                                       labelColor: labelColor,
-                                      colorByLoad: colorByLoad)
+                                      colorByLoad: colorByLoad,
+                                      style: style ?? MenuBarStyleStore.shared.style)
             if att.size().width + 2 <= ShellPrefs.menuBarWidthBudget { return att }
         }
         return nil
@@ -276,7 +288,8 @@ final class StatusBarController: NSObject {
                                    trend: MetricKind?,
                                    metrics m: SystemMetrics,
                                    labelColor: NSColor,
-                                   colorByLoad: Bool) -> NSAttributedString {
+                                   colorByLoad: Bool,
+                                   style: MenuBarStyle = MenuBarStyleStore.shared.style) -> NSAttributedString {
         let baseFont = NSFont.menuBarFont(ofSize: 0)
         let valueFont = NSFont.monospacedDigitSystemFont(ofSize: baseFont.pointSize, weight: .regular)
         let out = NSMutableAttributedString()
@@ -289,14 +302,22 @@ final class StatusBarController: NSObject {
         }
 
         for (i, kind) in kinds.enumerated() {
-            if i > 0 { text(" ", labelColor) }
-            if let sym = MenuBarGlyph.symbol(kind.symbol, pointSize: 11, color: labelColor) {
+            if i > 0 { text(style.separator, labelColor) }
+            if style.showIcons, let sym = MenuBarGlyph.symbol(kind.symbol, pointSize: 11, color: labelColor) {
                 out.append(MenuBarGlyph.attachment(sym, font: valueFont))
+            }
+            if style.showLabels {
+                let labelFont = NSFont.menuBarFont(ofSize: baseFont.pointSize - 1)
+                out.append(NSAttributedString(string: kind.title + " ", attributes: [
+                    .font: labelFont,
+                    .foregroundColor: labelColor.withAlphaComponent(0.75),
+                ]))
             }
             let color = ShellPrefs.menuBarColor(load: kind.load(m), colorByLoad: colorByLoad)
             text(kind.display(m), color)
 
-            if let t = trend, kind == t {
+            let showTrend = style.showTrend && kinds.count == 1
+            if showTrend {
                 text(" ", labelColor)
                 let raw = ShellState.shared.historyValues(kind, count: 8)
                 let normalized: [Double]

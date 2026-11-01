@@ -103,6 +103,7 @@ final class OnboardingModel: ObservableObject {
     /// D12：首启默认勾选「登录时自动启动」（用户可取消）
     @Published var launchAtLogin: Bool = true
     @Published var preset: MenuBarPreset = MenuBarPreset.current()
+    @Published var menuBarShowIcon: Bool = Prefs.shared.menuBarShowIcon
     @Published var singleMetric: MetricKind = MetricKind.parse(Prefs.shared.singleMetric) ?? .cpu
     @Published var fullDiskAccess: Bool = OnboardingModel.checkFullDiskAccess()
     @Published var notificationStatus: UNAuthorizationStatus = .notDetermined
@@ -198,8 +199,9 @@ final class OnboardingModel: ObservableObject {
     // MARK: 完成时落盘
 
     func applySelections() {
-        Prefs.shared.menuBarPreset = preset.rawValue
+        Prefs.shared.menuBarPreset = "custom"
         Prefs.shared.singleMetric = singleMetric.rawValue
+        Prefs.shared.menuBarShowIcon = menuBarShowIcon
         Prefs.shared.launchAtLogin = launchAtLogin
 
         if launchAtLogin {
@@ -356,8 +358,8 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 9) {
                 introBullet(icon: "menubar.rectangle",
-                            title: "菜单栏 5 指标",
-                            detail: "CPU / 内存 / 磁盘 / 上传 / 下载，默认单色，越界才变色")
+                            title: "菜单栏 3 指标",
+                            detail: "CPU / 内存 / 磁盘，默认只显示数字、隐藏獭图标，越界才变色")
                 introBullet(icon: "rectangle.on.rectangle",
                             title: "HUD 面板",
                             detail: "5 指标 + TOP3 进程 + 清理 / 卸载快捷入口")
@@ -565,76 +567,23 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, 1)
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                      spacing: 9) {
-                ForEach(MenuBarPreset.allCases) { preset in
-                    presetCard(preset)
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("CPU / 内存 / 磁盘").font(.system(size: 12, weight: .medium))
+                    Text("只显示数字；样式与排序之后可在设置里改")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
                 }
+                Spacer()
+                Toggle("獭图标", isOn: $model.menuBarShowIcon)
+                    .toggleStyle(.switch)
+                    .font(.system(size: 10.5))
             }
+            .padding(11)
+            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.primary.opacity(0.045)))
+            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.primary.opacity(0.07), lineWidth: 1))
 
-            if model.preset == .single {
-                singleMetricPicker
-            }
             Spacer(minLength: 0)
-        }
-    }
-
-    private func presetCard(_ preset: MenuBarPreset) -> some View {
-        let selected = model.preset == preset
-        return Button {
-            model.preset = preset
-        } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(preset.title).font(.system(size: 12, weight: .semibold))
-                    Spacer()
-                    if selected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.accentColor)
-                    }
-                }
-                Text(preset.preview)
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text(preset.subtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-            .padding(9)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.primary.opacity(selected ? 0.09 : 0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(selected ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.07),
-                              lineWidth: selected ? 1.5 : 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var singleMetricPicker: some View {
-        HStack(spacing: 6) {
-            Text("趋势指标")
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
-            Spacer()
-            ForEach(MetricKind.allCases) { kind in
-                Button {
-                    model.singleMetric = kind
-                } label: {
-                    Text(kind.title)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(model.singleMetric == kind
-                                                   ? Color.accentColor
-                                                   : Color.primary.opacity(0.06)))
-                        .foregroundStyle(model.singleMetric == kind ? Color.white : Color.primary)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 }

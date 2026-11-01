@@ -10,8 +10,10 @@ final class PluginWatcher {
     func start() {
         try? PluginStore.shared.ensurePluginsDirectory()
         try? ThemeStore.shared.ensureThemesDirectory()
+        try? MenuBarStyleStore.shared.ensureStylesDirectory()
         watch(PluginStore.shared.pluginsDirectory)
         watch(ThemeStore.shared.themesDirectory)
+        watch(MenuBarStyleStore.shared.stylesDirectory)
     }
 
     private func watch(_ dir: URL) {
@@ -32,6 +34,7 @@ final class PluginWatcher {
         let item = DispatchWorkItem {
             PluginStore.shared.reload()
             ThemeStore.shared.reload()
+            MenuBarStyleStore.shared.reload()
             NotificationCenter.default.post(name: ShellPrefs.changedNotification, object: nil)
         }
         pending = item

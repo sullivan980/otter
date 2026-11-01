@@ -20,9 +20,7 @@ final class MenuBarSettings: ObservableObject {
     static let defs: [MetricDef] = [
         MetricDef(id: "cpu", name: "CPU", icon: "cpu"),
         MetricDef(id: "mem", name: "内存", icon: "memorychip"),
-        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive"),
-        MetricDef(id: "up", name: "上传", icon: "arrow.up"),
-        MetricDef(id: "down", name: "下载", icon: "arrow.down")
+        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive")
     ]
 
     @Published var preset: String { didSet { persist() } }
@@ -34,10 +32,11 @@ final class MenuBarSettings: ObservableObject {
     @Published var showDown: Bool { didSet { persist() } }
     @Published var colorByLoad: Bool { didSet { persist() } }
     @Published var order: [String] { didSet { persist() } }
+    @Published var showIcon: Bool { didSet { persist() } }
 
     init() {
         let p = Prefs.shared
-        preset = p.menuBarPreset
+        preset = "custom"
         singleMetric = p.singleMetric
         showCPU = p.showCPU
         showMem = p.showMem
@@ -46,6 +45,8 @@ final class MenuBarSettings: ObservableObject {
         showDown = p.showDown
         colorByLoad = p.colorByLoad
         order = p.menuBarOrder
+        showIcon = p.menuBarShowIcon
+        if p.menuBarPreset != "custom" { p.menuBarPreset = "custom" }
     }
 
     /// 外部（其他窗口）改动后回读。
@@ -60,6 +61,8 @@ final class MenuBarSettings: ObservableObject {
         if showDown != p.showDown { showDown = p.showDown }
         if colorByLoad != p.colorByLoad { colorByLoad = p.colorByLoad }
         if order != p.menuBarOrder { order = p.menuBarOrder }
+        if showIcon != p.menuBarShowIcon { showIcon = p.menuBarShowIcon }
+        if preset != "custom" { preset = "custom" }
     }
 
     private func persist() {
@@ -73,6 +76,7 @@ final class MenuBarSettings: ObservableObject {
         p.showDown = showDown
         p.colorByLoad = colorByLoad
         p.menuBarOrder = order
+        p.menuBarShowIcon = showIcon
         NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
     }
 
@@ -118,21 +122,13 @@ final class MenuBarSettings: ObservableObject {
     }
 
     /// 菜单栏预览（与真实菜单栏模块顺序/口径一致）。
-    func previewItems(metrics: SystemMetrics) -> [(icon: String, value: String)] {
-        let ids: [String]
-        switch preset {
-        case "minimal": ids = []
-        case "dual": ids = ["cpu", "mem"]
-        case "single": ids = [singleMetric]
-        default: ids = order.filter { isVisible($0) }
-        }
+    func previewItems(metrics: SystemMetrics) -> [(id: String, icon: String, value: String)] {
+        let ids = order.filter { isVisible($0) }
         return ids.map { id in
             switch id {
-            case "mem": return ("memorychip", Fmt.percent(metrics.memUsedPercent))
-            case "disk": return ("internaldrive", Fmt.percent(metrics.diskUsedPercent))
-            case "up": return ("arrow.up", Fmt.rate(metrics.upBytesPerSec))
-            case "down": return ("arrow.down", Fmt.rate(metrics.downBytesPerSec))
-            default: return ("cpu", Fmt.percent(metrics.cpuPercent))
+            case "mem": return ("mem", "memorychip", Fmt.percent(metrics.memUsedPercent))
+            case "disk": return ("disk", "internaldrive", Fmt.percent(metrics.diskUsedPercent))
+            default: return ("cpu", "cpu", Fmt.percent(metrics.cpuPercent))
             }
         }
     }
@@ -157,13 +153,7 @@ struct SettingsView: View {
     @StateObject private var permissions = PermissionModel()
     @StateObject private var ui = SettingsUIState()
     @ObservedObject private var plugins = PluginStore.shared
-
-    private let presets: [(id: String, name: String, icon: String, desc: String)] = [
-        ("minimal", "极简", "water.waves", "只显示图标"),
-        ("dual", "双指标", "cpu", "CPU + 内存"),
-        ("single", "单指标", "gauge", "选一个指标"),
-        ("custom", "自定义", "slider.horizontal.3", "5 指标勾选 + 排序")
-    ]
+    @ObservedObject private var menuBarStyles = MenuBarStyleStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -425,130 +415,173 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 SubHeader(text: "菜单栏显示")
-                Text("选一个预设，或在自定义里勾选指标、调整顺序与着色。菜单栏至少保留图标，入口不会消失。")
+                Text("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载不再上菜单栏；獭图标默认不显示。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 8) {
-                    ForEach(presets, id: \.id) { preset in
-                        presetCard(preset)
-                    }
+                    Toggle("显示獭图标", isOn: $menu.showIcon)
+                        .toggleStyle(.switch)
+                        .font(.system(size: 11.5))
+                    Spacer()
+                    Text("默认不显示，只留数字")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.tertiary)
                 }
 
                 menuBarPreview
 
-                if menu.preset == "single" {
-                    HStack(spacing: 10) {
-                        Text("单指标").font(.system(size: 11.5)).foregroundStyle(.secondary)
-                        Picker("", selection: $menu.singleMetric) {
-                            ForEach(MenuBarSettings.defs, id: \.id) { def in
-                                Text(def.name).tag(def.id)
-                            }
+                Divider()
+
+                HStack(spacing: 10) {
+                    Text("显示样式").font(.system(size: 11, weight: .medium))
+                    Spacer()
+                    Button("打开样式目录") {
+                        if let dir = try? menuBarStyles.ensureStylesDirectory() {
+                            NSWorkspace.shared.open(dir)
                         }
-                        .labelsHidden()
-                        .frame(width: 130)
-                        Spacer()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Button("重新加载") {
+                        menuBarStyles.reload()
+                        ui.toast = "已重新加载菜单栏样式"
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                VStack(spacing: 2) {
+                    ForEach(menuBarStyles.styles) { style in
+                        menuBarStyleRow(style)
                     }
                 }
 
-                if menu.preset == "custom" {
-                    Divider()
-                    VStack(spacing: 6) {
-                        ForEach(Array(menu.order.enumerated()), id: \.offset) { index, id in
-                            HStack(spacing: 8) {
-                                Toggle("", isOn: Binding(
-                                    get: { menu.isVisible(id) },
-                                    set: { menu.setVisible(id, $0) }
-                                ))
-                                .toggleStyle(.checkbox)
-                                .labelsHidden()
-                                Image(systemName: menu.metricIcon(id))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 15)
-                                Text(menu.metricName(id)).font(.system(size: 11.5))
-                                Spacer()
-                                Button {
-                                    menu.move(id, up: true)
-                                } label: {
-                                    Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold))
-                                }
-                                .buttonStyle(.borderless)
-                                .disabled(index == 0)
-                                Button {
-                                    menu.move(id, up: false)
-                                } label: {
-                                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
-                                }
-                                .buttonStyle(.borderless)
-                                .disabled(index == menu.order.count - 1)
-                            }
-                            .padding(.vertical, 2)
-                        }
-                        Divider()
-                        HStack {
-                            Toggle("按负载着色（≥60% 黄 / ≥85% 红）", isOn: $menu.colorByLoad)
-                                .toggleStyle(.switch)
-                                .font(.system(size: 11.5))
-                            Spacer()
+                if !menuBarStyles.loadErrors.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(Array(menuBarStyles.loadErrors.enumerated()), id: \.offset) { _, line in
+                            Text("• \(line)").font(.system(size: 9.5)).foregroundStyle(.orange)
                         }
                     }
+                }
+
+                Divider()
+
+                VStack(spacing: 6) {
+                    ForEach(Array(menu.order.enumerated()), id: \.offset) { index, id in
+                        HStack(spacing: 8) {
+                            Toggle("", isOn: Binding(
+                                get: { menu.isVisible(id) },
+                                set: { menu.setVisible(id, $0) }
+                            ))
+                            .toggleStyle(.checkbox)
+                            .labelsHidden()
+                            Image(systemName: menu.metricIcon(id))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 15)
+                            Text(menu.metricName(id)).font(.system(size: 11.5))
+                            Spacer()
+                            Button {
+                                menu.move(id, up: true)
+                            } label: {
+                                Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold))
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(index == 0)
+                            Button {
+                                menu.move(id, up: false)
+                            } label: {
+                                Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(index == menu.order.count - 1)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+
+                Divider()
+                HStack {
+                    Toggle("按负载着色（≥60% 黄 / ≥85% 红）", isOn: $menu.colorByLoad)
+                        .toggleStyle(.switch)
+                        .font(.system(size: 11.5))
+                    Spacer()
                 }
             }
         }
     }
 
-    private func presetCard(_ preset: (id: String, name: String, icon: String, desc: String)) -> some View {
-        let selected = menu.preset == preset.id
+    private func menuBarStyleRow(_ style: MenuBarStyle) -> some View {
+        let selected = menuBarStyles.style.id == style.id
         return Button {
-            menu.preset = preset.id
+            menuBarStyles.select(style.id)
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Image(systemName: preset.icon).font(.system(size: 11, weight: .medium))
-                    Text(preset.name).font(.system(size: 11.5, weight: .semibold))
-                    Spacer(minLength: 0)
-                    if selected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color.accentColor)
-                    }
-                }
-                Text(preset.desc)
-                    .font(.system(size: 9.5))
+            HStack(spacing: 8) {
+                Text(style.name).font(.system(size: 11.5, weight: selected ? .medium : .regular))
+                Spacer()
+                Text(menuBarStyleSample(style))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+                if !style.isBuiltin {
+                    Text("自定义").font(.system(size: 8.5)).foregroundStyle(.tertiary)
+                }
+                if selected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.accent)
+                }
             }
-            .padding(9)
-            .frame(maxWidth: .infinity, minHeight: 54, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(selected ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.04))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(selected ? Color.accentColor.opacity(0.55) : Color.primary.opacity(0.07),
-                                  lineWidth: 1)
-            )
-            .foregroundStyle(selected ? Color.accentColor : Color.primary)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
+    private func menuBarStyleSample(_ style: MenuBarStyle) -> String {
+        let items = menu.previewItems(metrics: state.metrics)
+        let parts = items.map { item -> String in
+            var s = ""
+            if style.showLabels { s += menu.metricName(item.id) + " " }
+            s += item.value
+            return s
+        }
+        return parts.isEmpty ? "Otter" : parts.joined(separator: style.separator)
+    }
+
     private var menuBarPreview: some View {
         let items = menu.previewItems(metrics: state.metrics)
+        let style = menuBarStyles.style
         return HStack(spacing: 8) {
             Text("预览").font(.system(size: 10)).foregroundStyle(.tertiary)
-            HStack(spacing: 8) {
-                Image(systemName: "water.waves")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+            HStack(spacing: 0) {
+                if menu.showIcon {
+                    Image(systemName: "water.waves")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 6)
+                }
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    if index > 0 {
+                        Text(style.separator)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
                     HStack(spacing: 3) {
-                        Image(systemName: item.icon).font(.system(size: 9, weight: .semibold))
-                        Text(item.value).font(.system(size: 11, weight: .medium)).monospacedDigit()
+                        if style.showIcons {
+                            Image(systemName: item.icon)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        if style.showLabels {
+                            Text(menu.metricName(item.id))
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(item.value)
+                            .font(.system(size: 11, weight: .medium))
+                            .monospacedDigit()
                     }
                 }
             }
@@ -559,7 +592,7 @@ struct SettingsView: View {
                     .fill(Color.primary.opacity(0.08))
             )
             Spacer()
-            Text("1 秒内自动刷新").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+            Text("实时刷新").font(.system(size: 9)).foregroundStyle(.tertiary)
         }
     }
 

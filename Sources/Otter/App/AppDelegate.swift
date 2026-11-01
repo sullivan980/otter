@@ -16,6 +16,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "menubar-styles":
+                var sm = SystemMetrics.zero
+                sm.isReady = true
+                sm.cpuPercent = 42.4; sm.memUsedPercent = 61.2; sm.diskUsedPercent = 17.8
+                var parts: [String] = []
+                for s in MenuBarStyleStore.shared.styles {
+                    let title = StatusBarController.previewTitle(kinds: [.cpu, .mem], style: s, metrics: sm)
+                    parts.append("\"\(s.id)\":\"\(title)\"")
+                }
+                print("{\"mode\":\"menubar-styles\"," + parts.joined(separator: ",") + "}")
             case "notify":
                 var done = false
                 var json = "{}"
