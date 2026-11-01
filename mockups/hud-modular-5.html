@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Otter HUD · 模块化 5 案</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A0F13;color:#E9F1F5;font-family:-apple-system,"PingFang SC",sans-serif;padding:30px}
+h1{font-size:24px}.sub{color:#8FA6B2;font-size:13px;margin-top:8px;line-height:1.7;max-width:1080px}
+.hint{color:#6ED3E8;font-size:12.5px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px;margin-top:24px}
+.card{background:#141B21;border:1px solid #232F38;border-radius:20px;padding:18px}
+.cap{font-size:10px;letter-spacing:.16em;color:#6E8794;text-transform:uppercase}
+.name{font-size:15px;font-weight:650;margin-top:2px}.desc{font-size:11.5px;color:#9FB3BE;line-height:1.6;margin-top:5px;margin-bottom:12px}
+.stage{display:flex;justify-content:center}
+.hud{width:400px;height:520px;border-radius:18px;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:9px;
+  background:linear-gradient(160deg,#123544 0%,#0B2733 55%,#071B24 100%);color:#E9F4F7;
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),0 18px 40px rgba(0,0,0,.5)}
+.top{display:flex;align-items:center;gap:7px;font-size:11px;flex:none;height:18px}.top .dot{width:6px;height:6px;border-radius:50%;background:#6ED3E8}
+.top .clk{margin-left:auto;font-size:9.5px;color:#8FB0BB;font-variant-numeric:tabular-nums}
+.mod{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:9px 11px;display:flex;flex-direction:column;min-height:0}
+.mh{display:flex;align-items:baseline;gap:6px;flex:none}.mh .t{font-size:9.5px;letter-spacing:.12em;color:#8FB0BB;text-transform:uppercase}
+.mh .v{margin-left:auto;font-size:20px;font-weight:650;letter-spacing:-.5px;font-variant-numeric:tabular-nums}.mh .v small{font-size:9px;color:#8FB0BB;font-weight:500;margin-left:1px}
+.mh .s{font-size:8.5px;color:#7C9DA9;margin-left:4px}
+.g{flex:1;min-height:0;width:100%;display:block;margin-top:4px}
+.coregrid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;margin-top:5px;flex:none}
+.core{display:flex;align-items:center;gap:5px;font-size:8px;color:#8FB0BB}
+.core b{width:20px;text-align:right;color:#C9DEE6;font-weight:500;font-variant-numeric:tabular-nums}
+.cb{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.10);overflow:hidden}.cb i{display:block;height:100%;border-radius:99px;background:#6ED3E8}
+.row{display:flex;gap:8px}.row .mod{flex:1}
+.mini{display:flex;align-items:center;gap:6px;font-size:9px;color:#8FB0BB}.mini b{color:#E9F4F7;font-weight:600;font-size:11px}
+.spark{flex:1;height:14px}.spark svg{width:100%;height:100%;display:block}
+.acts{display:flex;gap:8px;flex:none;height:34px}.acts b{flex:1;display:grid;place-items:center;font-size:11px;font-weight:500;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10)}
+.acts b.p{background:#6ED3E8;color:#062330;border-color:transparent;font-weight:600}
+.procs{display:flex;flex-direction:column;gap:2px;flex:1;min-height:0;justify-content:center}
+.procs .r{display:flex;font-size:9.5px;color:#C9DEE6}.procs .r span:last-child{margin-left:auto;color:#7C9DA9}
+.gfill{fill:rgba(110,211,232,.16)}.gline{stroke:#6ED3E8;stroke-width:1.4;fill:none}
+</style></head><body>
+<h1>Otter HUD · 模块化 5 案</h1>
+<div class="sub">按你的要求：一个模块一件事——CPU 波动 + 8 核各自负载、内存实时波动、磁盘容量、上传/下载速率；模块之间留白，模块内部填满，整体铺满 400×520。</div>
+<div class="hint">回编号（1–5）或组合，例如「2 的分栏 + 1 的 CPU 模块」。</div>
+<div class="grid"><div class="card">
+  <div class="cap">MODULAR · 1</div><div class="name">纵向堆叠</div>
+  <div class="desc">CPU 占最大块（曲线 + 8 核），内存/磁盘并排，网络双速率，TOP 收尾。</div>
+  <div class="stage"><div class="hud">
+    <div class="top"><span class="dot"></span>系统状态 <span class="clk">21:58</span></div>
+    <div class="mod" style="flex:1.55">
+      <div class="mh"><span class="t">CPU</span><span class="s">8 核 · 已开机 11h</span><span class="v">34<small>%</small></span></div>
+      <svg class="g" viewBox="0 0 340 46" preserveAspectRatio="none">
+        <path class="gfill" d="M0 34 L20 26 L40 30 L60 20 L80 26 L100 14 L120 22 L140 18 L160 24 L180 12 L200 20 L220 16 L240 26 L260 18 L280 22 L300 13 L320 19 L340 15 L340 46 L0 46 Z"/>
+        <polyline class="gline" points="0,34 20,26 40,30 60,20 80,26 100,14 120,22 140,18 160,24 180,12 200,20 220,16 240,26 260,18 280,22 300,13 320,19 340,15"/>
+      </svg>
+      <div class="coregrid">
+        <div class="core"><span>C1</span><div class="cb"><i style="width:42%"></i></div><b>42</b></div>
+        <div class="core"><span>C2</span><div class="cb"><i style="width:18%"></i></div><b>18</b></div>
+        <div class="core"><span>C3</span><div class="cb"><i style="width:55%"></i></div><b>55</b></div>
+        <div class="core"><span>C4</span><div class="cb"><i style="width:12%"></i></div><b>12</b></div>
+        <div class="core"><span>C5</span><div class="cb"><i style="width:30%"></i></div><b>30</b></div>
+        <div class="core"><span>C6</span><div class="cb"><i style="width:8%"></i></div><b>8</b></div>
+        <div class="core"><span>C7</span><div class="cb"><i style="width:23%"></i></div><b>23</b></div>
+        <div class="core"><span>C8</span><div class="cb"><i style="width:15%"></i></div><b>15</b></div>
+      </div>
+    </div><div class="row" style="flex:.95"><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">内存</span><span class="v">71<small>%</small></span></div>
+      <div class="cap2">11.4/16 GB · 正常</div>
+      <svg class="g" viewBox="0 0 170 34" preserveAspectRatio="none">
+        <path fill="rgba(242,201,76,.16)" d="M0 24 L18 22 L36 25 L54 20 L72 23 L90 19 L108 22 L126 18 L144 21 L162 17 L170 19 L170 34 L0 34 Z"/>
+        <polyline fill="none" stroke="#F2C94C" stroke-width="1.4" points="0,24 18,22 36,25 54,20 72,23 90,19 108,22 126,18 144,21 162,17 170,19"/>
+      </svg>
+    </div><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">磁盘</span><span class="v">18<small>%</small></span></div>
+      <div class="cap2">82 / 460 GB</div>
+      <div style="height:7px;border-radius:99px;background:rgba(255,255,255,.10);margin-top:12px;overflow:hidden"><i style="display:block;width:18%;height:100%;background:#A78BFA;border-radius:99px"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:#5F6E79;margin-top:5px"><span>0</span><span>460 GB</span></div>
+    </div></div><div class="mod" style="flex:0.95">
+      <div class="mh"><span class="t">网络</span><span class="s">实时速率</span></div>
+      <div class="mini" style="margin-top:4px">↑ <b>4K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,11 20,9 40,12 60,7 80,10 100,6 120,9 140,5 160,8 180,6 200,9"/></svg></div></div>
+      <div class="mini" style="margin-top:4px">↓ <b>8K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,9 20,7 40,10 60,6 80,9 100,5 120,8 140,4 160,7 180,5 200,7"/></svg></div></div>
+    </div><div class="mod" style="flex:0.85">
+      <div class="mh"><span class="t">TOP 进程</span><span class="s">按 CPU</span></div>
+      <div class="procs">
+        <div class="r"><span>DeepSeek Harness</span><span>99%</span></div>
+        <div class="r"><span>Render Helper</span><span>58%</span></div>
+        <div class="r"><span>Harness Helper</span><span>23%</span></div>
+      </div>
+    </div>
+    <div class="acts"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+<div class="card">
+  <div class="cap">MODULAR · 2</div><div class="name">左右分栏</div>
+  <div class="desc">左栏整块 CPU（大曲线 + 8 核横条），右栏三块小模块：内存/磁盘/网络；底部 TOP 横跨。</div>
+  <div class="stage"><div class="hud">
+    <div class="top"><span class="dot"></span>系统状态 <span class="clk">21:58</span></div>
+    <div class="row" style="flex:1.7"><div style="flex:1.2;display:flex"><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">CPU</span><span class="s">8 核 · 已开机 11h</span><span class="v">34<small>%</small></span></div>
+      <svg class="g" viewBox="0 0 340 46" preserveAspectRatio="none">
+        <path class="gfill" d="M0 34 L20 26 L40 30 L60 20 L80 26 L100 14 L120 22 L140 18 L160 24 L180 12 L200 20 L220 16 L240 26 L260 18 L280 22 L300 13 L320 19 L340 15 L340 46 L0 46 Z"/>
+        <polyline class="gline" points="0,34 20,26 40,30 60,20 80,26 100,14 120,22 140,18 160,24 180,12 200,20 220,16 240,26 260,18 280,22 300,13 320,19 340,15"/>
+      </svg>
+      <div class="coregrid">
+        <div class="core"><span>C1</span><div class="cb"><i style="width:42%"></i></div><b>42</b></div>
+        <div class="core"><span>C2</span><div class="cb"><i style="width:18%"></i></div><b>18</b></div>
+        <div class="core"><span>C3</span><div class="cb"><i style="width:55%"></i></div><b>55</b></div>
+        <div class="core"><span>C4</span><div class="cb"><i style="width:12%"></i></div><b>12</b></div>
+        <div class="core"><span>C5</span><div class="cb"><i style="width:30%"></i></div><b>30</b></div>
+        <div class="core"><span>C6</span><div class="cb"><i style="width:8%"></i></div><b>8</b></div>
+        <div class="core"><span>C7</span><div class="cb"><i style="width:23%"></i></div><b>23</b></div>
+        <div class="core"><span>C8</span><div class="cb"><i style="width:15%"></i></div><b>15</b></div>
+      </div>
+    </div></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">内存</span><span class="v">71<small>%</small></span></div>
+      <div class="cap2">11.4/16 GB · 正常</div>
+      <svg class="g" viewBox="0 0 170 34" preserveAspectRatio="none">
+        <path fill="rgba(242,201,76,.16)" d="M0 24 L18 22 L36 25 L54 20 L72 23 L90 19 L108 22 L126 18 L144 21 L162 17 L170 19 L170 34 L0 34 Z"/>
+        <polyline fill="none" stroke="#F2C94C" stroke-width="1.4" points="0,24 18,22 36,25 54,20 72,23 90,19 108,22 126,18 144,21 162,17 170,19"/>
+      </svg>
+    </div><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">磁盘</span><span class="v">18<small>%</small></span></div>
+      <div class="cap2">82 / 460 GB</div>
+      <div style="height:7px;border-radius:99px;background:rgba(255,255,255,.10);margin-top:12px;overflow:hidden"><i style="display:block;width:18%;height:100%;background:#A78BFA;border-radius:99px"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:#5F6E79;margin-top:5px"><span>0</span><span>460 GB</span></div>
+    </div><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">网络</span><span class="s">实时速率</span></div>
+      <div class="mini" style="margin-top:4px">↑ <b>4K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,11 20,9 40,12 60,7 80,10 100,6 120,9 140,5 160,8 180,6 200,9"/></svg></div></div>
+      <div class="mini" style="margin-top:4px">↓ <b>8K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,9 20,7 40,10 60,6 80,9 100,5 120,8 140,4 160,7 180,5 200,7"/></svg></div></div>
+    </div></div></div><div class="mod" style="flex:0.7">
+      <div class="mh"><span class="t">TOP 进程</span><span class="s">按 CPU</span></div>
+      <div class="procs">
+        <div class="r"><span>DeepSeek Harness</span><span>99%</span></div>
+        <div class="r"><span>Render Helper</span><span>58%</span></div>
+        <div class="r"><span>Harness Helper</span><span>23%</span></div>
+      </div>
+    </div>
+    <div class="acts"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+<div class="card">
+  <div class="cap">MODULAR · 3</div><div class="name">2×2 网格</div>
+  <div class="desc">CPU 独占顶部一行，下面内存/磁盘/网络/TOP 四宫格；最整齐的模块地图。</div>
+  <div class="stage"><div class="hud">
+    <div class="top"><span class="dot"></span>系统状态 <span class="clk">21:58</span></div>
+    <div class="mod" style="flex:1.45">
+      <div class="mh"><span class="t">CPU</span><span class="s">8 核 · 已开机 11h</span><span class="v">34<small>%</small></span></div>
+      <svg class="g" viewBox="0 0 340 46" preserveAspectRatio="none">
+        <path class="gfill" d="M0 34 L20 26 L40 30 L60 20 L80 26 L100 14 L120 22 L140 18 L160 24 L180 12 L200 20 L220 16 L240 26 L260 18 L280 22 L300 13 L320 19 L340 15 L340 46 L0 46 Z"/>
+        <polyline class="gline" points="0,34 20,26 40,30 60,20 80,26 100,14 120,22 140,18 160,24 180,12 200,20 220,16 240,26 260,18 280,22 300,13 320,19 340,15"/>
+      </svg>
+      <div class="coregrid">
+        <div class="core"><span>C1</span><div class="cb"><i style="width:42%"></i></div><b>42</b></div>
+        <div class="core"><span>C2</span><div class="cb"><i style="width:18%"></i></div><b>18</b></div>
+        <div class="core"><span>C3</span><div class="cb"><i style="width:55%"></i></div><b>55</b></div>
+        <div class="core"><span>C4</span><div class="cb"><i style="width:12%"></i></div><b>12</b></div>
+        <div class="core"><span>C5</span><div class="cb"><i style="width:30%"></i></div><b>30</b></div>
+        <div class="core"><span>C6</span><div class="cb"><i style="width:8%"></i></div><b>8</b></div>
+        <div class="core"><span>C7</span><div class="cb"><i style="width:23%"></i></div><b>23</b></div>
+        <div class="core"><span>C8</span><div class="cb"><i style="width:15%"></i></div><b>15</b></div>
+      </div>
+    </div><div class="row" style="flex:1"><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">内存</span><span class="v">71<small>%</small></span></div>
+      <div class="cap2">11.4/16 GB · 正常</div>
+      <svg class="g" viewBox="0 0 170 34" preserveAspectRatio="none">
+        <path fill="rgba(242,201,76,.16)" d="M0 24 L18 22 L36 25 L54 20 L72 23 L90 19 L108 22 L126 18 L144 21 L162 17 L170 19 L170 34 L0 34 Z"/>
+        <polyline fill="none" stroke="#F2C94C" stroke-width="1.4" points="0,24 18,22 36,25 54,20 72,23 90,19 108,22 126,18 144,21 162,17 170,19"/>
+      </svg>
+    </div><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">磁盘</span><span class="v">18<small>%</small></span></div>
+      <div class="cap2">82 / 460 GB</div>
+      <div style="height:7px;border-radius:99px;background:rgba(255,255,255,.10);margin-top:12px;overflow:hidden"><i style="display:block;width:18%;height:100%;background:#A78BFA;border-radius:99px"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:#5F6E79;margin-top:5px"><span>0</span><span>460 GB</span></div>
+    </div></div><div class="row" style="flex:1"><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">网络</span><span class="s">实时速率</span></div>
+      <div class="mini" style="margin-top:4px">↑ <b>4K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,11 20,9 40,12 60,7 80,10 100,6 120,9 140,5 160,8 180,6 200,9"/></svg></div></div>
+      <div class="mini" style="margin-top:4px">↓ <b>8K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,9 20,7 40,10 60,6 80,9 100,5 120,8 140,4 160,7 180,5 200,7"/></svg></div></div>
+    </div><div class="mod" style="flex:1">
+      <div class="mh"><span class="t">TOP 进程</span><span class="s">按 CPU</span></div>
+      <div class="procs">
+        <div class="r"><span>DeepSeek Harness</span><span>99%</span></div>
+        <div class="r"><span>Render Helper</span><span>58%</span></div>
+        <div class="r"><span>Harness Helper</span><span>23%</span></div>
+      </div>
+    </div></div>
+    <div class="acts"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+<div class="card">
+  <div class="cap">MODULAR · 4</div><div class="name">等高模块</div>
+  <div class="desc">五块模块高度接近，节奏均匀；CPU 只是稍高一点，整体最克制。</div>
+  <div class="stage"><div class="hud">
+    <div class="top"><span class="dot"></span>系统状态 <span class="clk">21:58</span></div>
+    <div class="mod" style="flex:1.25">
+      <div class="mh"><span class="t">CPU</span><span class="s">8 核 · 已开机 11h</span><span class="v">34<small>%</small></span></div>
+      <svg class="g" viewBox="0 0 340 46" preserveAspectRatio="none">
+        <path class="gfill" d="M0 34 L20 26 L40 30 L60 20 L80 26 L100 14 L120 22 L140 18 L160 24 L180 12 L200 20 L220 16 L240 26 L260 18 L280 22 L300 13 L320 19 L340 15 L340 46 L0 46 Z"/>
+        <polyline class="gline" points="0,34 20,26 40,30 60,20 80,26 100,14 120,22 140,18 160,24 180,12 200,20 220,16 240,26 260,18 280,22 300,13 320,19 340,15"/>
+      </svg>
+      <div class="coregrid">
+        <div class="core"><span>C1</span><div class="cb"><i style="width:42%"></i></div><b>42</b></div>
+        <div class="core"><span>C2</span><div class="cb"><i style="width:18%"></i></div><b>18</b></div>
+        <div class="core"><span>C3</span><div class="cb"><i style="width:55%"></i></div><b>55</b></div>
+        <div class="core"><span>C4</span><div class="cb"><i style="width:12%"></i></div><b>12</b></div>
+        <div class="core"><span>C5</span><div class="cb"><i style="width:30%"></i></div><b>30</b></div>
+        <div class="core"><span>C6</span><div class="cb"><i style="width:8%"></i></div><b>8</b></div>
+        <div class="core"><span>C7</span><div class="cb"><i style="width:23%"></i></div><b>23</b></div>
+        <div class="core"><span>C8</span><div class="cb"><i style="width:15%"></i></div><b>15</b></div>
+      </div>
+    </div><div class="mod" style="flex:0.8">
+      <div class="mh"><span class="t">内存</span><span class="v">71<small>%</small></span></div>
+      <div class="cap2">11.4/16 GB · 正常</div>
+      <svg class="g" viewBox="0 0 170 34" preserveAspectRatio="none">
+        <path fill="rgba(242,201,76,.16)" d="M0 24 L18 22 L36 25 L54 20 L72 23 L90 19 L108 22 L126 18 L144 21 L162 17 L170 19 L170 34 L0 34 Z"/>
+        <polyline fill="none" stroke="#F2C94C" stroke-width="1.4" points="0,24 18,22 36,25 54,20 72,23 90,19 108,22 126,18 144,21 162,17 170,19"/>
+      </svg>
+    </div><div class="mod" style="flex:0.8">
+      <div class="mh"><span class="t">磁盘</span><span class="v">18<small>%</small></span></div>
+      <div class="cap2">82 / 460 GB</div>
+      <div style="height:7px;border-radius:99px;background:rgba(255,255,255,.10);margin-top:12px;overflow:hidden"><i style="display:block;width:18%;height:100%;background:#A78BFA;border-radius:99px"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:#5F6E79;margin-top:5px"><span>0</span><span>460 GB</span></div>
+    </div><div class="mod" style="flex:0.8">
+      <div class="mh"><span class="t">网络</span><span class="s">实时速率</span></div>
+      <div class="mini" style="margin-top:4px">↑ <b>4K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,11 20,9 40,12 60,7 80,10 100,6 120,9 140,5 160,8 180,6 200,9"/></svg></div></div>
+      <div class="mini" style="margin-top:4px">↓ <b>8K/s</b><div class="spark"><svg viewBox="0 0 200 14" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,9 20,7 40,10 60,6 80,9 100,5 120,8 140,4 160,7 180,5 200,7"/></svg></div></div>
+    </div><div class="mod" style="flex:0.75">
+      <div class="mh"><span class="t">TOP 进程</span><span class="s">按 CPU</span></div>
+      <div class="procs">
+        <div class="r"><span>DeepSeek Harness</span><span>99%</span></div>
+        <div class="r"><span>Render Helper</span><span>58%</span></div>
+        <div class="r"><span>Harness Helper</span><span>23%</span></div>
+      </div>
+    </div>
+    <div class="acts"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+<div class="card">
+  <div class="cap">MODULAR · 5</div><div class="name">焦点 + 横条</div>
+  <div class="desc">CPU 大块展示曲线与 8 核，其余四项压成横条；信息密度最高，最像'监控面板'。</div>
+  <div class="stage"><div class="hud">
+    <div class="top"><span class="dot"></span>系统状态 <span class="clk">21:58</span></div>
+    <div class="mod" style="flex:1.5">
+      <div class="mh"><span class="t">CPU</span><span class="s">8 核 · 已开机 11h</span><span class="v">34<small>%</small></span></div>
+      <svg class="g" viewBox="0 0 340 46" preserveAspectRatio="none">
+        <path class="gfill" d="M0 34 L20 26 L40 30 L60 20 L80 26 L100 14 L120 22 L140 18 L160 24 L180 12 L200 20 L220 16 L240 26 L260 18 L280 22 L300 13 L320 19 L340 15 L340 46 L0 46 Z"/>
+        <polyline class="gline" points="0,34 20,26 40,30 60,20 80,26 100,14 120,22 140,18 160,24 180,12 200,20 220,16 240,26 260,18 280,22 300,13 320,19 340,15"/>
+      </svg>
+      <div class="coregrid">
+        <div class="core"><span>C1</span><div class="cb"><i style="width:42%"></i></div><b>42</b></div>
+        <div class="core"><span>C2</span><div class="cb"><i style="width:18%"></i></div><b>18</b></div>
+        <div class="core"><span>C3</span><div class="cb"><i style="width:55%"></i></div><b>55</b></div>
+        <div class="core"><span>C4</span><div class="cb"><i style="width:12%"></i></div><b>12</b></div>
+        <div class="core"><span>C5</span><div class="cb"><i style="width:30%"></i></div><b>30</b></div>
+        <div class="core"><span>C6</span><div class="cb"><i style="width:8%"></i></div><b>8</b></div>
+        <div class="core"><span>C7</span><div class="cb"><i style="width:23%"></i></div><b>23</b></div>
+        <div class="core"><span>C8</span><div class="cb"><i style="width:15%"></i></div><b>15</b></div>
+      </div>
+    </div><div class="mod" style="flex:.55;flex-direction:row;align-items:center;gap:10px"><span class="t" style="font-size:9px;color:#8FB0BB;white-space:nowrap">内存</span><span style="font-size:15px;font-weight:600">71%</span><span class="cap2" style="margin:0">11.4/16 GB</span><div class="spark" style="height:18px"><svg viewBox="0 0 160 18" preserveAspectRatio="none"><polyline fill="none" stroke="#F2C94C" stroke-width="1.2" points="0,13 20,11 40,14 60,9 80,12 100,8 120,11 140,7 160,10"/></svg></div></div><div class="mod" style="flex:.55;flex-direction:row;align-items:center;gap:10px"><span class="t" style="font-size:9px;color:#8FB0BB;white-space:nowrap">磁盘</span><span style="font-size:15px;font-weight:600">18%</span><div style="flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.10);overflow:hidden"><i style="display:block;width:18%;height:100%;background:#A78BFA;border-radius:99px"></i></div><span class="cap2" style="margin:0">82/460 GB</span></div><div class="mod" style="flex:.55;flex-direction:row;align-items:center;gap:10px"><span class="t" style="font-size:9px;color:#8FB0BB;white-space:nowrap">网络</span><span style="font-size:13px;font-weight:600">↑4K/s</span><span style="font-size:13px;font-weight:600">↓8K/s</span><div class="spark" style="height:18px"><svg viewBox="0 0 160 18" preserveAspectRatio="none"><polyline fill="none" stroke="#4ADE80" stroke-width="1.2" points="0,12 20,9 40,13 60,7 80,11 100,6 120,9 140,5 160,8"/></svg></div></div><div class="mod" style="flex:.6;flex-direction:row;align-items:center;gap:14px"><span class="t" style="font-size:9px;color:#8FB0BB;white-space:nowrap">TOP</span><span class="cap2" style="margin:0">DeepSeek Harness <b style="color:#E9F4F7">99%</b></span><span class="cap2" style="margin:0">Render Helper <b style="color:#E9F4F7">58%</b></span></div>
+    <div class="acts"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+</div></body></html>
