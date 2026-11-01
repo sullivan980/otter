@@ -238,6 +238,10 @@ final class CleanViewModel: ObservableObject {
                     self.statusLine = cleanResult.success
                         ? "清理完成，释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))"
                         : "清理结束（成功：\(cleanResult.success ? "是" : "否")）"
+                    if cleanResult.success {
+                        Prefs.shared.lastCleanAt = Date().timeIntervalSince1970
+                        Prefs.shared.lastCleanBytes = cleanResult.freedBytes
+                    }
                     if cleanResult.success, Prefs.shared.notificationsEnabled {
                         Notifications.shared.postCleanFinished(freedBytes: cleanResult.freedBytes)
                     }
@@ -329,11 +333,18 @@ struct CleanView: View {
     private var contentForPhase: some View {
         switch model.phase {
         case .idle:
-            EmptyStateView(icon: "sparkles",
-                           title: "点击扫描，预览可清理项",
-                           message: "扫描是只读预览，不会立刻删除任何文件；确认计划后才会执行清理。",
-                           actionTitle: "扫描可清理项") { model.scan() }
-                .frame(minHeight: 320)
+            VStack(spacing: 10) {
+                EmptyStateView(icon: "sparkles",
+                               title: "点击扫描，预览可清理项",
+                               message: "扫描是只读预览，不会立刻删除任何文件；确认计划后才会执行清理。",
+                               actionTitle: "扫描可清理项") { model.scan() }
+                if let summary = lastCleanSummary {
+                    Text(summary)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(minHeight: 320)
 
         case .scanning:
             PanelCard {
@@ -381,6 +392,16 @@ struct CleanView: View {
                            actionTitle: "重新扫描") { model.scan() }
                 .frame(minHeight: 280)
         }
+    }
+
+    /// 上次清理摘要（没有记录时返回 nil）。
+    private var lastCleanSummary: String? {
+        let at = Prefs.shared.lastCleanAt
+        guard at > 0 else { return nil }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "M月d日 HH:mm"
+        let when = fmt.string(from: Date(timeIntervalSince1970: at))
+        return "上次清理：\(when) · 释放 \(Fmt.bytes(Double(Prefs.shared.lastCleanBytes)))"
     }
 
     private var previewContent: some View {

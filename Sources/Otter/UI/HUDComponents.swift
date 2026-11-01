@@ -259,11 +259,26 @@ enum MenuBarGlyph {
         return NSAttributedString(attachment: att)
     }
 
-    /// 獭模板图标（极简预设 / 降级用；NSButton.image 会正确模板化反色）
+    /// 獭模板图标（菜单栏品牌 + 极简预设 / 降级用；NSButton.image 会正确模板化反色）
     static func brandTemplate() -> NSImage? {
-        let img = NSImage(systemSymbolName: "water.waves", accessibilityDescription: "Otter")
-            ?? NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Otter")
-        img?.isTemplate = true
+        let size = NSSize(width: 18, height: 18)
+        let img = NSImage(size: size, flipped: false) { _ in
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: NSRect(x: 2.2, y: 11.2, width: 4.4, height: 4.4)).fill()
+            NSBezierPath(ovalIn: NSRect(x: 11.4, y: 11.2, width: 4.4, height: 4.4)).fill()
+            NSBezierPath(ovalIn: NSRect(x: 1.4, y: 5.2, width: 15.2, height: 10.0)).fill()
+            let ripple = NSBezierPath()
+            ripple.move(to: NSPoint(x: 1.2, y: 3.0))
+            ripple.curve(to: NSPoint(x: 16.8, y: 3.0),
+                         controlPoint1: NSPoint(x: 5.4, y: 5.6),
+                         controlPoint2: NSPoint(x: 12.6, y: 0.6))
+            ripple.lineWidth = 1.5
+            ripple.lineCapStyle = .round
+            NSColor.black.setStroke()
+            ripple.stroke()
+            return true
+        }
+        img.isTemplate = true
         return img
     }
 }

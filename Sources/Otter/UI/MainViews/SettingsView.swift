@@ -278,6 +278,9 @@ struct SettingsView: View {
                 settingRow(title: "系统通知",
                            desc: notificationDescription) {
                     HStack(spacing: 8) {
+                        Text(notificationStatusLabel)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(ui.notificationStatus == .denied ? Color.orange : Color.secondary)
                         if ui.notificationStatus == .denied {
                             Button("打开通知设置") {
                                 Notifications.shared.openSystemSettings()
@@ -344,6 +347,14 @@ struct SettingsView: View {
         let actual = LoginItem.isEnabled
         if ui.loginActual != actual { ui.loginActual = actual }
         if ui.launchAtLogin == actual { ui.toast = nil }
+    }
+
+    private var notificationStatusLabel: String {
+        switch ui.notificationStatus {
+        case .authorized, .provisional, .ephemeral: return "已允许"
+        case .denied: return "已拒绝"
+        default: return "未请求"
+        }
     }
 
     private var notificationDescription: String {
@@ -521,15 +532,9 @@ struct SettingsView: View {
     private var aboutSection: some View {
         PanelCard {
             HStack(alignment: .center, spacing: 13) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 46, height: 46)
-                    Image(systemName: "water.waves")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                }
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 46, height: 46)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 7) {
                         Text("Otter").font(.system(size: 16, weight: .bold))

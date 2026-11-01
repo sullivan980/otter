@@ -122,7 +122,21 @@ final class StatusBarController: NSObject {
         refresh(force: true)
     }
     @objc private func openOnboarding() { OnboardingController.shared.show(force: true) }
-    @objc private func openAbout() { NSApp.orderFrontStandardAboutPanel(nil) }
+    @objc private func openAbout() {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let credits = NSAttributedString(
+            string: "海獭图标：马蒂斯剪纸风格（Otter 原创绘制）\n清理引擎：mole\n本地运行 · 无网络请求",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ])
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "Otter",
+            .applicationVersion: "v" + v,
+            .version: "",
+            .credits: credits
+        ])
+    }
     @objc private func quit() { NSApp.terminate(nil) }
     // MARK: - 渲染
 
@@ -153,7 +167,9 @@ final class StatusBarController: NSObject {
             return
         }
 
-        button.image = nil
+        // 菜单栏始终带一枚獭图标，指标文字跟在后面（和引导里「点一下獭图标」一致）
+        button.image = MenuBarGlyph.brandTemplate()
+        button.imagePosition = .imageLeading
         item.length = NSStatusItem.variableLength
 
         let trend: MetricKind? = preset == .single ? kinds.first : nil

@@ -260,15 +260,9 @@ struct OnboardingView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(LinearGradient(colors: [Color.accentColor.opacity(0.9), Color.accentColor.opacity(0.6)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                Image(systemName: "water.waves")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 32, height: 32)
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Otter").font(.system(size: 14, weight: .semibold))
@@ -327,8 +321,8 @@ struct OnboardingView: View {
                 .frame(minWidth: 68)
                 .padding(.vertical, 7)
                 .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor))
-                .foregroundStyle(.white)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(ThemeStore.shared.theme.accent))
+                .foregroundStyle(ThemeStore.shared.theme.isDark ? Color.black : Color.white)
         }
         .buttonStyle(.plain)
     }

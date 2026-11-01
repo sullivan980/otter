@@ -234,10 +234,30 @@ struct HUDView: View {
                 Text(kind.display(m))
                     .font(.system(size: 29, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                if kind == .cpu, !m.cpuCores.isEmpty {
+                    coreBars(tint: tint)
+                }
                 HUDSparkline(values: shell.normalizedHistory(kind, count: 60), tint: tint)
-                    .frame(height: 27)
+                    .frame(height: 24)
             }
         }
+    }
+
+    /// 每核负载条（填充 CPU 卡空白，也方便看单核打满）。
+    private func coreBars(tint: Color) -> some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(Array(m.cpuCores.enumerated()), id: \.offset) { _, v in
+                let f = min(max(v / 100, 0), 1)
+                Capsule()
+                    .fill(tint.opacity(0.22 + 0.7 * f))
+                    .frame(width: 7, height: 4 + 14 * f)
+            }
+            Spacer(minLength: 4)
+            Text("每核")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+        }
+        .frame(height: 18, alignment: .bottom)
     }
 
     /// 半宽百分比卡（内存 / 磁盘）
@@ -515,9 +535,9 @@ struct HUDView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(primary ? Color.accentColor : Color.primary.opacity(0.07))
+                    .fill(primary ? theme.accent : Color.primary.opacity(0.07))
             )
-            .foregroundStyle(primary ? Color.white : Color.primary)
+            .foregroundStyle(primary ? (theme.isDark ? Color.black : Color.white) : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
         .buttonStyle(.plain)

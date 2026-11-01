@@ -21,8 +21,8 @@ final class RealMetricsSampler: MetricsSampling {
 
     private let lock = NSLock()
 
-    /// 上一次 CPU tick（各核求和后的 user/system/nice/idle）。
-    private var prevCPUTicks: (user: UInt64, system: UInt64, nice: UInt64, idle: UInt64)?
+    /// 上一次各核 tick（每核 [user, system, idle, nice]）。
+    private var prevCoreTicks: [[UInt64]]?
 
     /// 上一次各网卡收发字节数。按网卡名保存，网卡增减/计数重置时不会污染合计。
     private var prevNet: [String: (rx: UInt64, tx: UInt64)] = [:]
@@ -91,7 +91,9 @@ final class RealMetricsSampler: MetricsSampling {
         m.coreCount = coreCount
         m.uptime = ProcessInfo.processInfo.systemUptime
 
-        m.cpuPercent = sampleCPU()
+        let cpu = sampleCPU()
+        m.cpuPercent = cpu.total
+        m.cpuCores = cpu.cores
 
         let mem = sampleMemory()
         m.memUsedBytes = mem.used
@@ -115,48 +117,48 @@ final class RealMetricsSampler: MetricsSampling {
 
     // MARK: - CPU
 
-    private func sampleCPU() -> Double {
+    /// 返回总负载与每核负载；首次采样按「开机以来」计算。
+    private func sampleCPU() -> (total: Double, cores: [Double]) {
         var cpuInfo: processor_info_array_t?
         var infoCount: mach_msg_type_number_t = 0
         var cpuCount: natural_t = 0
 
         let kr = host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &cpuCount, &cpuInfo, &infoCount)
-        guard kr == KERN_SUCCESS, let info = cpuInfo, cpuCount > 0 else { return 0 }
+        guard kr == KERN_SUCCESS, let info = cpuInfo, cpuCount > 0 else { return (0, []) }
 
-        // host_processor_info 返回的缓冲区必须由调用方 vm_deallocate，否则每 2s 泄漏一次。
         defer {
             let bytes = vm_size_t(infoCount) * vm_size_t(MemoryLayout<integer_t>.stride)
             vm_deallocate(mach_task_self_, vm_address_t(bitPattern: info), bytes)
         }
 
-        var user: UInt64 = 0
-        var system: UInt64 = 0
-        var nice: UInt64 = 0
-        var idle: UInt64 = 0
-
+        var perCore: [[UInt64]] = []
+        perCore.reserveCapacity(Int(cpuCount))
         info.withMemoryRebound(to: processor_cpu_load_info.self, capacity: Int(cpuCount)) { loads in
             for i in 0..<Int(cpuCount) {
                 let ticks = loads[i].cpu_ticks
-                // CPU_STATE_USER=0, SYSTEM=1, IDLE=2, NICE=3
-                user += UInt64(ticks.0)
-                system += UInt64(ticks.1)
-                idle += UInt64(ticks.2)
-                nice += UInt64(ticks.3)
+                perCore.append([UInt64(ticks.0), UInt64(ticks.1), UInt64(ticks.2), UInt64(ticks.3)])
             }
         }
 
-        let prev = prevCPUTicks ?? (user: 0, system: 0, nice: 0, idle: 0)
-        prevCPUTicks = (user, system, nice, idle)
+        let prev = prevCoreTicks
+        prevCoreTicks = perCore
 
-        // 首次采样 prev 为 0，等价于「开机以来平均 CPU」，比直接返回 0 更有意义。
-        let dUser = user >= prev.user ? user - prev.user : 0
-        let dSystem = system >= prev.system ? system - prev.system : 0
-        let dNice = nice >= prev.nice ? nice - prev.nice : 0
-        let dIdle = idle >= prev.idle ? idle - prev.idle : 0
-        let total = dUser + dSystem + dNice + dIdle
-        guard total > 0 else { return 0 }
-        let busy = dUser + dSystem + dNice
-        return min(100, max(0, Double(busy) / Double(total) * 100))
+        var cores: [Double] = []
+        var busyAll: UInt64 = 0
+        var totalAll: UInt64 = 0
+        for i in 0..<perCore.count {
+            let now = perCore[i]
+            let before: [UInt64] = (prev != nil && prev!.count == perCore.count) ? prev![i] : [0, 0, 0, 0]
+            var delta = [UInt64](repeating: 0, count: 4)
+            for k in 0..<4 { delta[k] = now[k] >= before[k] ? now[k] - before[k] : 0 }
+            let busy = delta[0] + delta[1] + delta[3]
+            let total = busy + delta[2]
+            cores.append(total > 0 ? min(100, max(0, Double(busy) / Double(total) * 100)) : 0)
+            busyAll += busy
+            totalAll += total
+        }
+        let total = totalAll > 0 ? min(100, max(0, Double(busyAll) / Double(totalAll) * 100)) : 0
+        return (total, cores)
     }
 
     // MARK: - 内存

@@ -15,6 +15,8 @@ final class Prefs {
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
         case notificationsEnabled
         case appTheme           // A | B | C | D | E（默认 E 水波玻璃）
+        case lastCleanAt        // 上次清理时间（Unix 秒）
+        case lastCleanBytes     // 上次清理释放字节数
     }
 
     private func bool(_ k: Key, default def: Bool) -> Bool {
@@ -48,6 +50,16 @@ final class Prefs {
     var appTheme: String {
         get { d.string(forKey: Key.appTheme.rawValue) ?? "E" }
         set { d.set(newValue, forKey: Key.appTheme.rawValue) }
+    }
+
+    /// 上次成功清理的时间与释放量（用于清理页展示）。
+    var lastCleanAt: Double {
+        get { d.double(forKey: Key.lastCleanAt.rawValue) }
+        set { d.set(newValue, forKey: Key.lastCleanAt.rawValue) }
+    }
+    var lastCleanBytes: Int64 {
+        get { Int64(d.double(forKey: Key.lastCleanBytes.rawValue)) }
+        set { d.set(Double(newValue), forKey: Key.lastCleanBytes.rawValue) }
     }
 
     /// 自定义菜单栏的指标顺序（CSV 存储，兼容 dev-shell/dev-ui 约定的 "menuBarOrder" 键）。

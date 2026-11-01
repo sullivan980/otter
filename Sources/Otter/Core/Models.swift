@@ -9,6 +9,8 @@ struct TopProcess: Identifiable, Hashable {
 
 struct SystemMetrics {
     var cpuPercent: Double = 0
+    /// 每核负载（0-100，按核顺序）；采样首次可能为空。
+    var cpuCores: [Double] = []
     var memUsedPercent: Double = 0
     var memUsedBytes: UInt64 = 0
     var memTotalBytes: UInt64 = 0
