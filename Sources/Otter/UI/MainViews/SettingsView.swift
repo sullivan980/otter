@@ -20,7 +20,9 @@ final class MenuBarSettings: ObservableObject {
     static let defs: [MetricDef] = [
         MetricDef(id: "cpu", name: "CPU", icon: "cpu"),
         MetricDef(id: "mem", name: "内存", icon: "memorychip"),
-        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive")
+        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive"),
+        MetricDef(id: "up", name: "上传", icon: "arrow.up"),
+        MetricDef(id: "down", name: "下载", icon: "arrow.down")
     ]
 
     @Published var preset: String { didSet { persist() } }
@@ -128,6 +130,8 @@ final class MenuBarSettings: ObservableObject {
             switch id {
             case "mem": return ("mem", "memorychip", Fmt.percent(metrics.memUsedPercent))
             case "disk": return ("disk", "internaldrive", Fmt.percent(metrics.diskUsedPercent))
+            case "up": return ("up", "arrow.up", Fmt.rate(metrics.upBytesPerSec))
+            case "down": return ("down", "arrow.down", Fmt.rate(metrics.downBytesPerSec))
             default: return ("cpu", "cpu", Fmt.percent(metrics.cpuPercent))
             }
         }
@@ -415,7 +419,7 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 SubHeader(text: "菜单栏显示")
-                Text("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载不再上菜单栏；獭图标默认不显示。")
+                Text("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载默认不勾选，需要时打开即可；獭图标默认不显示。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

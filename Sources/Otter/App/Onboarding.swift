@@ -358,8 +358,8 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 9) {
                 introBullet(icon: "menubar.rectangle",
-                            title: "菜单栏 3 指标",
-                            detail: "CPU / 内存 / 磁盘，默认只显示数字、隐藏獭图标，越界才变色")
+                            title: "菜单栏 5 项可选",
+                            detail: "CPU / 内存 / 磁盘 / 上传 / 下载，默认只显示前三个，隐藏獭图标")
                 introBullet(icon: "rectangle.on.rectangle",
                             title: "HUD 面板",
                             detail: "5 指标 + TOP3 进程 + 清理 / 卸载快捷入口")
@@ -569,8 +569,8 @@ struct OnboardingView: View {
 
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("CPU / 内存 / 磁盘").font(.system(size: 12, weight: .medium))
-                    Text("只显示数字；样式与排序之后可在设置里改")
+                    Text("CPU / 内存 / 磁盘 / 上传 / 下载").font(.system(size: 12, weight: .medium))
+                    Text("默认只显示前三项；样式与排序之后可在设置里改")
                         .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                 }

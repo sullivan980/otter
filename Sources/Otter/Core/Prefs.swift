@@ -73,13 +73,13 @@ final class Prefs {
     /// 自定义菜单栏的指标顺序（CSV 存储，兼容 dev-shell/dev-ui 约定的 "menuBarOrder" 键）。
     var menuBarOrder: [String] {
         get {
-            let raw = d.string(forKey: Key.menuBarOrder.rawValue) ?? "cpu,mem,disk"
+            let raw = d.string(forKey: Key.menuBarOrder.rawValue) ?? "cpu,mem,disk,up,down"
             let ids = raw.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
-            let valid = ids.filter { ["cpu", "mem", "disk"].contains($0) }
-            return valid.isEmpty ? ["cpu", "mem", "disk"] : valid
+            let valid = ids.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
+            return valid.isEmpty ? ["cpu", "mem", "disk", "up", "down"] : valid
         }
         set {
-            let valid = newValue.filter { ["cpu", "mem", "disk"].contains($0) }
+            let valid = newValue.filter { ["cpu", "mem", "disk", "up", "down"].contains($0) }
             d.set(valid.joined(separator: ","), forKey: Key.menuBarOrder.rawValue)
         }
     }

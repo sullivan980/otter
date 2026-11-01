@@ -203,6 +203,8 @@ final class StatusBarController: NSObject {
                 .cpu: Prefs.shared.showCPU,
                 .mem: Prefs.shared.showMem,
                 .disk: Prefs.shared.showDisk,
+                .up: Prefs.shared.showUp,
+                .down: Prefs.shared.showDown,
             ]
             let order = Prefs.shared.menuBarOrder.compactMap { MetricKind.parse($0) }
             let picked = order.filter { enabled[$0] == true }
