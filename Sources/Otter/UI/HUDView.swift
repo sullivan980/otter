@@ -47,7 +47,9 @@ struct HUDView: View {
             header
 
             Group {
-                if let plugin = activePlugin, !plugin.rows.isEmpty {
+                if let plugin = activePlugin, plugin.layout == "stack" {
+                    stackContent(plugin)
+                } else if let plugin = activePlugin, !plugin.rows.isEmpty {
                     pluginContent(plugin)
                 } else {
                     builtInContent
@@ -55,7 +57,11 @@ struct HUDView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            actions
+            if activePlugin?.layout == "stack" {
+                stackActions
+            } else {
+                actions
+            }
         }
         .padding(.horizontal, 14)
         .padding(.top, 12)
@@ -211,6 +217,265 @@ struct HUDView: View {
         case .uptime: uptimeCard
         case .divider: Divider().padding(.vertical, 1)
         }
+    }
+
+    // MARK: - 纵向堆叠布局（n2，0.4 默认）
+    //
+    // 5 个模块：CPU（曲线 + 8 核）/ 内存 / 磁盘 / 网络 / TOP3。
+    // 高度固定铺满 400×520，皮肤/强调色/圆角由主题和插件 style 控制，排版由 typeface 控制。
+
+    private var stackTypefaceDesign: Font.Design? {
+        switch activeStyle?.typeface {
+        case "mono": return .monospaced
+        case "serif": return .serif
+        case "rounded": return .rounded
+        default: return nil
+        }
+    }
+
+    /// 启动初期历史为空时用第一个非零点补齐左侧，避免曲线长时间贴底。
+    private func warmHistory(_ kind: MetricKind, count: Int) -> [Double] {
+        var values = shell.normalizedHistory(kind, count: count)
+        if let idx = values.firstIndex(where: { $0 > 0 }), idx > 0 {
+            let seed = values[idx]
+            for i in 0..<idx { values[i] = seed }
+        }
+        return values
+    }
+
+    private func numFont(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
+        if let design = stackTypefaceDesign {
+            return .system(size: size, weight: weight, design: design)
+        }
+        return .system(size: size, weight: weight)
+    }
+
+    private var cpuTint: Color { theme.accent }
+    private var memTint: Color { Color(nsColor: .systemOrange) }
+    private var diskTint: Color { Color(nsColor: .systemPurple) }
+    private var netTint: Color { Color(nsColor: .systemGreen) }
+
+    private func stackContent(_ plugin: HUDPlugin) -> some View {
+        let gap = CGFloat(plugin.style?.spacing ?? 9)
+        return VStack(spacing: gap) {
+            stackCPU
+            HStack(spacing: 8) {
+                stackMem
+                stackDisk
+            }
+            stackNet
+            stackTop
+        }
+    }
+
+    private func stackLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .kerning(1.1)
+            .foregroundStyle(.secondary)
+    }
+
+    private var stackCPU: some View {
+        HUDCard(padding: 9) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    stackLabel("CPU")
+                    Text(m.coreCount > 0 ? "\(m.coreCount) 核 · 已开机 \(Fmt.uptime(m.uptime))" : "读取中…")
+                        .font(.system(size: 8.5))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(MetricKind.cpu.display(m))
+                        .font(numFont(21))
+                        .monospacedDigit()
+                }
+                HUDAreaChart(values: warmHistory(.cpu, count: 48), tint: cpuTint)
+                    .frame(height: 44)
+                coreGrid(tint: cpuTint)
+            }
+        }
+        .frame(height: 152)
+    }
+
+    private func coreGrid(tint: Color) -> some View {
+        let cores = Array(m.cpuCores.prefix(8))
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                         alignment: .leading, spacing: 3) {
+            if cores.isEmpty {
+                Text("每核读取中…")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(Array(cores.enumerated()), id: \.offset) { idx, value in
+                    HStack(spacing: 5) {
+                        Text("C\(idx + 1)")
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 16, alignment: .leading)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.primary.opacity(0.10))
+                                Capsule()
+                                    .fill(tint)
+                                    .frame(width: max(2, geo.size.width * CGFloat(min(max(value / 100, 0), 1))))
+                            }
+                        }
+                        .frame(height: 4)
+                        Text("\(Int(value.rounded()))")
+                            .font(.system(size: 8, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18, alignment: .trailing)
+                    }
+                    .frame(height: 10)
+                }
+            }
+        }
+    }
+
+    private var stackMem: some View {
+        HUDCard(padding: 9) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    stackLabel("内存")
+                    Spacer(minLength: 2)
+                    Text(MetricKind.mem.display(m))
+                        .font(numFont(19))
+                        .monospacedDigit()
+                }
+                Text(m.memTotalBytes > 0
+                     ? "\(Fmt.bytes(Double(m.memUsedBytes))) / \(Fmt.bytes(Double(m.memTotalBytes)))"
+                     : "读取中…")
+                    .font(.system(size: 8.5))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                HUDAreaChart(values: warmHistory(.mem, count: 40), tint: memTint)
+                    .frame(height: 32)
+            }
+        }
+        .frame(height: 94)
+    }
+
+    private var stackDisk: some View {
+        HUDCard(padding: 9) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    stackLabel("磁盘")
+                    Spacer(minLength: 2)
+                    Text(MetricKind.disk.display(m))
+                        .font(numFont(19))
+                        .monospacedDigit()
+                }
+                Text(m.diskTotalBytes > 0
+                     ? "\(Fmt.bytes(Double(m.diskUsedBytes))) / \(Fmt.bytes(Double(m.diskTotalBytes)))"
+                     : "读取中…")
+                    .font(.system(size: 8.5))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                HUDBar(fraction: min(max(m.diskUsedPercent / 100, 0), 1), tint: diskTint, height: 6)
+                    .frame(height: 6)
+                    .padding(.top, 8)
+                HStack(spacing: 4) {
+                    Text("0")
+                    Spacer(minLength: 2)
+                    Text(m.diskTotalBytes > 0 ? Fmt.bytes(Double(m.diskTotalBytes)) : "--")
+                }
+                .font(.system(size: 7.5, design: .monospaced))
+                .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(height: 94)
+    }
+
+    private var stackNet: some View {
+        HUDCard(padding: 9) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    stackLabel("网络")
+                    Text("实时速率").font(.system(size: 8.5)).foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                netRow(.up, tint: netTint)
+                netRow(.down, tint: netTint)
+            }
+        }
+        .frame(height: 80)
+    }
+
+    private func netRow(_ kind: MetricKind, tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: kind.symbol)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: 10)
+            Text(kind.display(m))
+                .font(numFont(12, weight: .semibold))
+                .monospacedDigit()
+                .frame(width: 62, alignment: .leading)
+            HUDAreaChart(values: warmHistory(kind, count: 36), tint: tint)
+                .frame(height: 12)
+        }
+    }
+
+    private var stackTop: some View {
+        HUDCard(padding: 7) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    stackLabel("TOP 进程")
+                    Spacer()
+                    Text("按 CPU")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.tertiary)
+                }
+                if m.topProcesses.isEmpty {
+                    Text("暂无进程数据，采集中…")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                } else {
+                    ForEach(Array(m.topProcesses.prefix(3).enumerated()), id: \.element.id) { idx, p in
+                        HStack(spacing: 6) {
+                            Text("\(idx + 1)")
+                                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 8, alignment: .leading)
+                            Text(p.name)
+                                .font(.system(size: 9.5))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer(minLength: 4)
+                            Text(Fmt.percent(p.cpuPercent))
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(height: 68)
+    }
+
+    private var stackActions: some View {
+        HStack(spacing: 8) {
+            stackButton("清理", primary: false) { onAction?("clean") }
+            stackButton("卸载", primary: false) { onAction?("uninstall") }
+            stackButton("主界面", primary: true) { onAction?(nil) }
+        }
+    }
+
+    private func stackButton(_ title: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(primary ? theme.accent : Color.primary.opacity(0.07))
+                )
+                .foregroundStyle(primary ? (theme.isDark ? Color.black : Color.white) : Color.primary)
+                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 卡片

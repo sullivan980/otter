@@ -1,16 +1,19 @@
 {
-  "id": "n8",
-  "name": "N8 胶囊速览",
+  "id": "n2",
+  "name": "N2 纵向堆叠",
   "version": "1.0.0",
   "author": "Otter",
   "width": 400,
   "height": 520,
-  "radius": 22,
+  "radius": 18,
+  "layout": "stack",
+  "style": { "cardRadius": 13, "spacing": 9, "showSparkline": true, "typeface": "system" },
   "rows": [
     { "metric": "cpu", "style": "big", "label": null },
     { "metric": "mem", "style": "bar", "label": null },
     { "metric": "disk", "style": "bar", "label": null },
     { "metric": "up", "style": "text", "label": null },
-    { "metric": "down", "style": "text", "label": null }
+    { "metric": "down", "style": "text", "label": null },
+    { "metric": "procs", "style": "text", "label": "TOP 进程" }
   ]
 }

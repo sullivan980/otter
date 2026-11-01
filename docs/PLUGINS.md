@@ -18,7 +18,8 @@
       "width": 400,
       "height": 520,
       "radius": 16,
-      "style": { "cardRadius": 10, "spacing": 5, "showSparkline": false, "background": "theme" },
+      "layout": "stack",
+  "style": { "cardRadius": 10, "spacing": 5, "showSparkline": false, "typeface": "system" },
       "rows": [
         { "metric": "cpu",  "style": "big",  "label": null },
         { "metric": "mem",  "style": "bar",  "label": null },
@@ -31,8 +32,9 @@
 
 - rows 支持 metric：cpu / mem / disk / up / down / procs / clock / uptime / divider；
   style：big / bar / ring / text / divider。
-- style（v2 新增，均可选）：cardRadius 卡片圆角、spacing 卡片间距、
-  showSparkline 是否显示火花线、background（material / solid / theme）。
+- style（均可选）：cardRadius 卡片圆角、spacing 卡片间距、
+  showSparkline 是否显示火花线、background、typeface 排版预设
+  （system = SF Pro 默认 / mono / serif / rounded）。
 - 用户插件用新 id（如 n10）会追加为一种新 HUD 样式；
   **用内置 id（n1 / n8）并以 <id>/manifest.json 文件夹形式放置，会覆盖内置样式**，
   删掉该文件夹即恢复内置（适合反复调间距/圆角而不重装）。
@@ -68,6 +70,13 @@
 | 用户 HUD 插件 | 用户目录 plugins/ | 能（设置页删除） |
 | 内置主题 A–E | 代码内置 | 不能（但可被同 id 用户主题覆盖） |
 | 用户主题 | 用户目录 themes/ | 能（删文件 + 重新加载） |
+
+## 排版与皮肤分离
+
+- 皮肤（颜色/背景/圆角/材质）：主题 JSON 控制；
+- 布局（模块顺序/尺寸/间距）：HUD 插件 manifest 控制；
+- 字体（字族/字重/字号/字距）：manifest style.typeface 控制。
+改其一不影响其他，三者都可以通过替换 JSON 热更新。
 
 ## 为什么不重装就能改样式
 

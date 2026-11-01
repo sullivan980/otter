@@ -367,6 +367,51 @@ struct HUDSparkline: View {
     }
 }
 
+/// 面积曲线（纵向堆叠布局的 CPU / 内存 / 网络波动）
+struct HUDAreaChart: View {
+    var values: [Double]      // 已归一化 0...1
+    var tint: Color
+    var lineWidth: CGFloat = 1.4
+
+    var body: some View {
+        GeometryReader { geo in
+            let pts = points(in: geo.size)
+            ZStack {
+                if pts.count >= 2 {
+                    Path { p in
+                        p.move(to: CGPoint(x: pts[0].x, y: geo.size.height))
+                        p.addLines(pts)
+                        p.addLine(to: CGPoint(x: pts[pts.count - 1].x, y: geo.size.height))
+                        p.closeSubpath()
+                    }
+                    .fill(LinearGradient(colors: [tint.opacity(0.26), tint.opacity(0.02)],
+                                         startPoint: .top, endPoint: .bottom))
+                    Path { p in p.addLines(pts) }
+                        .stroke(tint.opacity(0.95),
+                                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                } else {
+                    Path { p in
+                        p.move(to: CGPoint(x: 0, y: geo.size.height / 2))
+                        p.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
+                    }
+                    .stroke(tint.opacity(0.16), lineWidth: 1)
+                }
+            }
+        }
+    }
+
+    private func points(in size: CGSize) -> [CGPoint] {
+        guard values.count >= 2, size.width > 0, size.height > 0 else { return [] }
+        let inset: CGFloat = 1
+        let h = max(1, size.height - inset * 2)
+        return values.enumerated().map { i, v in
+            let x = CGFloat(i) / CGFloat(values.count - 1) * (size.width - inset * 2) + inset
+            let y = size.height - inset - CGFloat(min(max(v, 0), 1)) * h
+            return CGPoint(x: x, y: y)
+        }
+    }
+}
+
 /// 环形进度（插件 manifest 的 ring 样式）
 struct HUDRing: View {
     var fraction: Double

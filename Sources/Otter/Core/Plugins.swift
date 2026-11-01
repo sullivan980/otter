@@ -21,6 +21,8 @@ struct HUDPluginStyle: Codable, Hashable {
     var spacing: Double?
     var showSparkline: Bool?
     var background: String?   // material | solid | theme
+    /// 排版预设：system（SF Pro，默认）| mono | serif | rounded。
+    var typeface: String?
 }
 
 struct HUDPlugin: Codable, Identifiable, Hashable {
@@ -32,6 +34,8 @@ struct HUDPlugin: Codable, Identifiable, Hashable {
     var height: Double?
     var radius: Double?
     var style: HUDPluginStyle?
+    /// 布局类型：缺省为旧版 rows 布局；"stack" 为纵向堆叠模块布局。
+    var layout: String?
     let rows: [HUDPluginRow]
 
     /// 窗口尺寸缺省值：HUD 固定 400×520（与其他窗口一致，插件可覆盖）。
@@ -239,8 +243,8 @@ final class PluginStore: ObservableObject {
             self.overriddenIDs = overriddenIDs
             self.loadErrors = errors
             if !merged.contains(where: { $0.id == self.activeId }) {
-                // 当前启用插件被删除/损坏 → 回退第一个内置（首次启动为 n1）。
-                self.activeId = merged.first?.id ?? "n1"
+                // 当前启用插件被删除/损坏 → 回退第一个内置（0.4 起为 n2 纵向堆叠）。
+                self.activeId = merged.first?.id ?? "n2"
             }
             for e in errors { NSLog("[otter] 插件加载：\(e)") }
         }
@@ -316,7 +320,7 @@ final class PluginStore: ObservableObject {
                 try FileManager.default.removeItem(at: target)
             }
             reload()
-            if activeId == id { activeId = plugins.first?.id ?? "n1" }
+            if activeId == id { activeId = plugins.first?.id ?? "n2" }
         } catch {
             lastActionError = PluginError.io(error.localizedDescription).localizedDescription
         }
@@ -379,8 +383,10 @@ final class PluginStore: ObservableObject {
     // MARK: 内置默认 manifest（Resources/plugins 缺失时兜底；内容与 n1.json / n8.json 一致）
 
     private static let fallbackBuiltins: [HUDPlugin] = [
-        HUDPlugin(id: "n1", name: "N1 瓷砖网格", version: "1.0.0", author: "Otter",
-                  width: 400, height: 520, radius: 16,
+        HUDPlugin(id: "n2", name: "N2 纵向堆叠", version: "1.0.0", author: "Otter",
+                  width: 400, height: 520, radius: 18,
+                  style: HUDPluginStyle(cardRadius: 13, spacing: 9, showSparkline: true, background: nil, typeface: "system"),
+                  layout: "stack",
                   rows: [
                     HUDPluginRow(metric: "cpu", style: "big", label: nil),
                     HUDPluginRow(metric: "mem", style: "bar", label: nil),
@@ -388,18 +394,8 @@ final class PluginStore: ObservableObject {
                     HUDPluginRow(metric: "up", style: "text", label: nil),
                     HUDPluginRow(metric: "down", style: "text", label: nil),
                     HUDPluginRow(metric: "procs", style: "text", label: "TOP 进程")
-                  ]),
-        HUDPlugin(id: "n8", name: "N8 胶囊速览", version: "1.0.0", author: "Otter",
-                  width: 400, height: 520, radius: 22,
-                  rows: [
-                    HUDPluginRow(metric: "cpu", style: "big", label: nil),
-                    HUDPluginRow(metric: "mem", style: "bar", label: nil),
-                    HUDPluginRow(metric: "disk", style: "bar", label: nil),
-                    HUDPluginRow(metric: "up", style: "text", label: nil),
-                    HUDPluginRow(metric: "down", style: "text", label: nil)
                   ])
-    ]
-}
+    ]}
 
 // MARK: - 验收自测（Lead 添加，dev-ui 保留此签名）
 

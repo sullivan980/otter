@@ -60,7 +60,7 @@ struct PluginSection: View {
                     .controlSize(.small)
                 }
 
-                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。v2 新增可选 \"style\"：cardRadius / spacing / showSparkline / background，可微调间距、圆角与火花线。放进插件目录后会自动重载，无需重装应用。")
+                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。layout=\"stack\" 使用纵向堆叠模块布局；style 支持 cardRadius / spacing / showSparkline / typeface（system/mono/serif/rounded）。放进插件目录后会自动重载，无需重装应用。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

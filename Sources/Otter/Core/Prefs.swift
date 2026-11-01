@@ -10,7 +10,7 @@ final class Prefs {
         case showCPU, showMem, showDisk, showUp, showDown
         case colorByLoad          // 是否按负载着色（默认关）
         case singleMetric         // cpu | mem | disk | up | down
-        case hudStyle             // n1 | n8（内置插件 id）
+        case hudStyle             // 插件 id（0.4 起默认 n2）
         case launchAtLogin
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
         case notificationsEnabled
@@ -39,7 +39,7 @@ final class Prefs {
         set { d.set(newValue, forKey: Key.singleMetric.rawValue) }
     }
     var hudStyle: String {
-        get { d.string(forKey: Key.hudStyle.rawValue) ?? "n1" }
+        get { d.string(forKey: Key.hudStyle.rawValue) ?? "n2" }
         set { d.set(newValue, forKey: Key.hudStyle.rawValue) }
     }
     var launchAtLogin: Bool { get { bool(.launchAtLogin, default: false) } set { d.set(newValue, forKey: Key.launchAtLogin.rawValue) } }
