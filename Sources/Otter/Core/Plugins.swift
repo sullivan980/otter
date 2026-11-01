@@ -91,6 +91,8 @@ final class PluginStore: ObservableObject {
 
     private(set) var builtinIDs: Set<String> = []
     private(set) var userIDs: Set<String> = []
+    /// 被用户同 id 插件覆盖的内置插件（删掉用户覆盖后自动恢复内置）。
+    private(set) var overriddenIDs: Set<String> = []
 
     private init() {
         reload()
@@ -105,10 +107,10 @@ final class PluginStore: ObservableObject {
         plugin(id: activeId) ?? plugins.first
     }
 
-    func isBuiltin(_ id: String) -> Bool { builtinIDs.contains(id) }
+    func isBuiltin(_ id: String) -> Bool { builtinIDs.contains(id) && !overriddenIDs.contains(id) }
 
     func origin(of id: String) -> PluginOrigin {
-        builtinIDs.contains(id) ? .builtin : .user
+        isBuiltin(id) ? .builtin : .user
     }
 
     /// 用户插件目录（不存在时返回目标路径，不自动创建）。
@@ -137,6 +139,7 @@ final class PluginStore: ObservableObject {
         var errors: [String] = []
         var builtinIDs = Set<String>()
         var userIDs = Set<String>()
+        var overriddenIDs = Set<String>()
         var builtinPlugins: [HUDPlugin] = []
         var userPlugins: [HUDPlugin] = []
 
@@ -188,7 +191,11 @@ final class PluginStore: ObservableObject {
                         let p = try Self.decodePlugin(at: manifest)
                         try Self.validate(p)
                         if builtinIDs.contains(p.id) {
-                            errors.append("用户插件 \(child.lastPathComponent)：不能与内置插件同 id「\(p.id)」，已忽略")
+                            // 同 id 覆盖内置（方便迭代内置样式）；删掉覆盖后恢复内置。
+                            if let idx = builtinPlugins.firstIndex(where: { $0.id == p.id }) {
+                                builtinPlugins[idx] = p
+                                overriddenIDs.insert(p.id)
+                            }
                         } else if userIDs.contains(p.id) {
                             errors.append("用户插件重复 id「\(p.id)」：\(child.lastPathComponent) 已忽略")
                         } else {
@@ -203,7 +210,11 @@ final class PluginStore: ObservableObject {
                         let p = try Self.decodePlugin(at: child)
                         try Self.validate(p)
                         if builtinIDs.contains(p.id) {
-                            errors.append("用户插件 \(child.lastPathComponent)：不能与内置插件同 id「\(p.id)」，已忽略")
+                            // 同 id 覆盖内置（方便迭代内置样式）；删掉覆盖后恢复内置。
+                            if let idx = builtinPlugins.firstIndex(where: { $0.id == p.id }) {
+                                builtinPlugins[idx] = p
+                                overriddenIDs.insert(p.id)
+                            }
                         } else if userIDs.contains(p.id) {
                             errors.append("用户插件重复 id「\(p.id)」：\(child.lastPathComponent) 已忽略")
                         } else {
@@ -225,6 +236,7 @@ final class PluginStore: ObservableObject {
             self.plugins = merged
             self.builtinIDs = builtinIDs
             self.userIDs = userIDs
+            self.overriddenIDs = overriddenIDs
             self.loadErrors = errors
             if !merged.contains(where: { $0.id == self.activeId }) {
                 // 当前启用插件被删除/损坏 → 回退第一个内置（首次启动为 n1）。

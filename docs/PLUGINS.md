@@ -33,7 +33,10 @@
   style：big / bar / ring / text / divider。
 - style（v2 新增，均可选）：cardRadius 卡片圆角、spacing 卡片间距、
   showSparkline 是否显示火花线、background（material / solid / theme）。
-- 用户插件 id 不能与内置插件相同（内置 n1 / n8），请用新 id，例如 n10。
+- 用户插件用新 id（如 n10）会追加为一种新 HUD 样式；
+  **用内置 id（n1 / n8）并以 <id>/manifest.json 文件夹形式放置，会覆盖内置样式**，
+  删掉该文件夹即恢复内置（适合反复调间距/圆角而不重装）。
+- 覆盖内置时请用文件夹形式：plugins/n1/manifest.json。
 
 ## 主题 JSON
 
