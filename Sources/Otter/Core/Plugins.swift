@@ -15,6 +15,14 @@ struct HUDPluginRow: Codable, Identifiable, Hashable {
     let label: String?
 }
 
+/// HUD 视觉参数（v2 插件可选）：让不写代码也能调间距/圆角/火花线/背景。
+struct HUDPluginStyle: Codable, Hashable {
+    var cardRadius: Double?
+    var spacing: Double?
+    var showSparkline: Bool?
+    var background: String?   // material | solid | theme
+}
+
 struct HUDPlugin: Codable, Identifiable, Hashable {
     let id: String
     let name: String
@@ -23,6 +31,7 @@ struct HUDPlugin: Codable, Identifiable, Hashable {
     var width: Double?
     var height: Double?
     var radius: Double?
+    var style: HUDPluginStyle?
     let rows: [HUDPluginRow]
 
     /// 窗口尺寸缺省值：HUD 固定 400×520（与其他窗口一致，插件可覆盖）。

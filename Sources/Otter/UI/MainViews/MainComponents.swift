@@ -109,9 +109,9 @@ struct PanelCard<Content: View>: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: theme.radius, style: .continuous)
-                    .strokeBorder(theme.panelStroke, lineWidth: theme == .paperOtter ? 1.2 : 1)
+                    .strokeBorder(theme.panelStroke, lineWidth: theme.id == "D" ? 1.2 : 1)
             )
-            .shadow(color: .black.opacity(theme == .paperOtter ? 0 : 0.07), radius: 8, y: 3)
+            .shadow(color: .black.opacity(theme.id == "D" ? 0 : 0.07), radius: 8, y: 3)
     }
 }
 

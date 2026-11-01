@@ -40,6 +40,8 @@ struct HUDView: View {
         plugins.plugin(id: plugins.activeId)
     }
 
+    private var activeStyle: HUDPluginStyle? { activePlugin?.style }
+
     var body: some View {
         VStack(spacing: 8) {
             header
@@ -138,7 +140,7 @@ struct HUDView: View {
     private func pluginContent(_ plugin: HUDPlugin) -> some View {
         let specs = rowSpecs(for: plugin)
         return ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 8) {
+            VStack(spacing: CGFloat(plugin.style?.spacing ?? 8)) {
                 if !m.isReady {
                     skeletonLayout
                 } else {
@@ -237,8 +239,10 @@ struct HUDView: View {
                 if kind == .cpu, !m.cpuCores.isEmpty {
                     coreBars(tint: tint)
                 }
-                HUDSparkline(values: shell.normalizedHistory(kind, count: 60), tint: tint)
-                    .frame(height: 24)
+                if activeStyle?.showSparkline != false {
+                    HUDSparkline(values: shell.normalizedHistory(kind, count: 60), tint: tint)
+                        .frame(height: 24)
+                }
             }
         }
     }

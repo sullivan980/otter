@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Otter HUD 样式提案</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A0F13;color:#E9F1F5;font-family:-apple-system,"PingFang SC",sans-serif;padding:30px}
+h1{font-size:24px}.sub{color:#8FA6B2;font-size:13px;margin-top:8px;line-height:1.7;max-width:1040px}
+.hint{color:#6ED3E8;font-size:12.5px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px;margin-top:24px}
+.card{background:#141B21;border:1px solid #232F38;border-radius:20px;padding:18px}
+.cap{font-size:10px;letter-spacing:.16em;color:#6E8794;text-transform:uppercase}
+.name{font-size:15px;font-weight:650;margin-top:2px}.desc{font-size:11.5px;color:#9FB3BE;line-height:1.6;margin-top:6px;margin-bottom:12px}
+.stage{display:flex;justify-content:center}
+.hud{width:400px;height:520px;border-radius:18px;overflow:hidden;position:relative;padding:14px;display:flex;flex-direction:column;
+  background:linear-gradient(150deg,#123544 0%,#0B2733 55%,#071B24 100%);color:#E9F4F7;
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),0 18px 40px rgba(0,0,0,.5)}
+.hud .head{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:9px}
+.live{font-size:10.5px;color:#9FC3CE;display:flex;align-items:center;gap:4px}
+.dot{width:6px;height:6px;border-radius:50%;background:#6ED3E8}
+.clock{margin-left:auto;font-size:10.5px;color:#9FC3CE;font-variant-numeric:tabular-nums}
+.tile{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:11px 12px;margin-bottom:9px}
+.row{display:flex;justify-content:space-between;font-size:11px;color:#A9C4CE}
+.big{font-size:34px;font-weight:650;letter-spacing:-1px;line-height:1.1;margin-top:2px;font-variant-numeric:tabular-nums}
+.sub2{font-size:10px;color:#8FB0BB;margin-top:2px}
+.bar{height:5px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:7px;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.half{display:flex;gap:9px;margin-bottom:9px}.half .tile{flex:1;margin:0}
+.net{display:flex;gap:22px}.net .k{font-size:10px;color:#8FB0BB;margin-bottom:2px}.net .v{font-size:16px;font-weight:600}
+.procs .p{display:flex;gap:8px;font-size:11.5px;padding:3px 0}.procs .p .pct{margin-left:auto;color:#8FB0BB}.procs .p .mem{width:56px;text-align:right;color:#6F8F9A}
+.actions{display:flex;gap:8px;margin-top:auto}.actions .b{flex:1;text-align:center;font-size:11.5px;padding:9px 0;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10)}
+.actions .p{background:#6ED3E8;color:#062330;border-color:transparent;font-weight:600}
+.spark{height:22px;margin-top:6px;background:linear-gradient(180deg,rgba(110,211,232,.25),transparent);border-radius:5px;position:relative;overflow:hidden}
+.spark svg{position:absolute;inset:0;width:100%;height:100%}
+.cores{display:flex;align-items:flex-end;gap:3px;height:18px;margin-top:5px}.cores i{width:7px;border-radius:3px;background:#6ED3E8;display:block}
+.list .item{display:flex;align-items:baseline;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.08)}
+.list .item .n{font-size:11.5px;color:#A9C4CE;width:64px}.list .item .val{margin-left:auto;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.list .item .unit{font-size:10px;color:#8FB0BB;margin-left:2px}
+.list .track{height:3px;border-radius:99px;background:rgba(255,255,255,.10);margin:2px 0 6px}
+.list .track i{display:block;height:100%;border-radius:99px;background:#6ED3E8}
+.list .sec{font-size:9.5px;letter-spacing:.14em;color:#7C9DA9;text-transform:uppercase;margin:10px 0 2px}
+.list .top{display:flex;gap:8px;font-size:11.5px;padding:3px 0;color:#CFE3EA}.list .top .i{width:14px;color:#7C9DA9}.list .top .pct{margin-left:auto;color:#9FC3CE}
+.list .foot{display:flex;gap:16px;margin-top:auto;padding-top:8px;font-size:11.5px;color:#6ED3E8}
+.rings .hero{display:flex;align-items:center;gap:16px;margin:6px 0 12px}
+.ring{position:relative;width:132px;height:132px;border-radius:50%;background:conic-gradient(#6ED3E8 0 34%,rgba(255,255,255,.10) 34% 100%);display:grid;place-items:center}
+.ring::after{content:"";position:absolute;inset:12px;border-radius:50%;background:#0D2A35}
+.ring .v{position:relative;z-index:2;font-size:30px;font-weight:650}.ring .l{position:absolute;bottom:22px;font-size:9px;color:#8FB0BB;z-index:2}
+.smallring{width:74px;height:74px;border-radius:50%;background:conic-gradient(#F2C94C 0 71%,rgba(255,255,255,.10) 71%);display:grid;place-items:center;position:relative}
+.smallring::after{content:"";position:absolute;inset:8px;border-radius:50%;background:#0D2A35}.smallring b{position:relative;z-index:2;font-size:14px}
+.ringlabels{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#A9C4CE}
+.edit .kicker{font-size:9.5px;letter-spacing:.22em;color:#7C9DA9;text-transform:uppercase}
+.edit h2{font-size:15px;font-weight:600;margin-top:2px}
+.edit .huge{font-size:58px;font-weight:640;letter-spacing:-2px;line-height:1;margin:14px 0 2px;font-variant-numeric:tabular-nums}
+.edit .huge span{font-size:20px;color:#8FB0BB;margin-left:4px}
+.edit .hr{height:1px;background:rgba(255,255,255,.18);margin:12px 0}
+.edit .pair{display:flex;justify-content:space-between;font-size:12px;color:#CFE3EA;padding:5px 0}
+.edit .pair b{font-weight:600;font-variant-numeric:tabular-nums}
+.edit .note{font-size:10px;color:#7C9DA9;margin-top:6px}
+.edit .act{display:flex;gap:18px;margin-top:auto;font-size:11.5px;color:#6ED3E8}
+.glass .pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 12px;font-size:11.5px;margin-bottom:10px}
+.glass .m{display:flex;align-items:center;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.07)}
+.glass .m .n{font-size:11.5px;color:#A9C4CE;width:70px}.glass .m .v{margin-left:auto;font-size:22px;font-weight:600}
+.glass .m .v small{font-size:10px;color:#8FB0BB}.glass .m .bar{flex:1;margin:0 14px}
+.glass .top{font-size:11px;color:#CFE3EA;padding:4px 4px}.glass .top .r{display:flex;gap:8px;padding:3px 0}.glass .top .pct{margin-left:auto;color:#9FC3CE}
+.glass .btns{display:flex;gap:8px;margin-top:auto}.glass .btns b{flex:1;text-align:center;font-size:11px;font-weight:500;padding:9px 0;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14)}
+.glass .btns b.p{background:#6ED3E8;color:#062330}
+.twocol .g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.twocol .cell{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:11px;padding:9px 10px}
+.twocol .cell .n{font-size:10px;color:#9FC3CE}.twocol .cell .v{font-size:22px;font-weight:650;margin-top:2px}.twocol .cell .v small{font-size:10px;color:#8FB0BB}
+.twocol .full{grid-column:span 2}
+</style></head><body>
+<h1>Otter HUD · 六种样式（400×520）</h1>
+<div class="sub">都在 400×520 的画布里做，同一套 E 主题颜色。布局/信息密度/视觉语言不同：选一个（或组合），我把它做成 HUD 插件 manifest，后续样式改动直接换 JSON，不用重装。</div>
+<div class="hint">回字母即可：H1–H6。也可以说「H2 的信息密度 + H5 的玻璃质感」。</div>
+<div class="grid"><div class="card">
+  <div class="cap">H1 · 卡片流</div>
+  <div class="name">卡片流（现版）</div>
+  <div class="desc">信息分组最清楚，CPU 大卡 + 每核条 + 火花线；占满 520pt。</div>
+  <div class="stage"><div class="hud">
+    <div class="head">≋ 系统状态 <span class="live"><i class="dot"></i>实时监控中</span><span class="clock">21:33:12</span></div>
+    <div class="tile"><div class="row"><span>CPU</span><span>8 核 · 已开机 11 小时</span></div><div class="big">34%</div>
+      <div class="cores"><i style="height:14px"></i><i style="height:9px"></i><i style="height:16px"></i><i style="height:7px"></i><i style="height:12px"></i><i style="height:6px"></i><i style="height:10px"></i><i style="height:5px"></i></div>
+      <div class="spark"><svg viewBox="0 0 360 22" preserveAspectRatio="none"><polyline points="0,18 30,16 60,19 90,14 120,17 150,13 180,15 210,11 240,14 270,10 300,12 330,9 360,7" fill="none" stroke="#6ED3E8" stroke-width="1.6"/></svg></div></div>
+    <div class="half">
+      <div class="tile"><div class="row"><span>内存</span><span>71%</span></div><div class="sub2">11 GB / 16 GB</div><div class="bar"><i style="width:71%;background:#F2C94C"></i></div></div>
+      <div class="tile"><div class="row"><span>磁盘</span><span>18%</span></div><div class="sub2">82 GB / 460 GB</div><div class="bar"><i style="width:18%;background:#6ED3E8"></i></div></div>
+    </div>
+    <div class="tile net"><div><div class="k">上传</div><div class="v">4K/s</div></div><div><div class="k">下载</div><div class="v">8K/s</div></div></div>
+    <div class="tile procs"><div class="row"><span>TOP 进程</span><span>按 CPU</span></div>
+      <div class="p"><span>DeepSeek Harness</span><span class="pct">99%</span><span class="mem">899 MB</span></div>
+      <div class="p"><span>Render Helper</span><span class="pct">58%</span><span class="mem">637 MB</span></div>
+      <div class="p"><span>Harness Helper</span><span class="pct">23%</span><span class="mem">160 MB</span></div></div>
+    <div class="actions"><div class="b">清理</div><div class="b">卸载</div><div class="b p">主界面</div></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="cap">H2 · 极简列表</div>
+  <div class="name">极简列表</div>
+  <div class="desc">去掉卡片，一行一指标 + 细进度条；同样高度能放更多信息，最干练。</div>
+  <div class="stage"><div class="hud list">
+    <div class="head">≋ 系统状态 <span class="live"><i class="dot"></i>实时监控中</span><span class="clock">21:33:12</span></div>
+    <div class="item"><span class="n">CPU</span><span class="val">34<span class="unit">%</span></span></div><div class="track"><i style="width:34%"></i></div>
+    <div class="item"><span class="n">内存</span><span class="val">71<span class="unit">%</span></span></div><div class="track"><i style="width:71%;background:#F2C94C"></i></div>
+    <div class="item"><span class="n">磁盘</span><span class="val">18<span class="unit">%</span></span></div><div class="track"><i style="width:18%"></i></div>
+    <div class="item"><span class="n">上传</span><span class="val">4<span class="unit">K/s</span></span></div>
+    <div class="item"><span class="n">下载</span><span class="val">8<span class="unit">K/s</span></span></div>
+    <div class="sec">TOP 进程</div>
+    <div class="top"><span class="i">1</span><span>DeepSeek Harness</span><span class="pct">99%</span></div>
+    <div class="top"><span class="i">2</span><span>Render Helper</span><span class="pct">58%</span></div>
+    <div class="top"><span class="i">3</span><span>Harness Helper</span><span class="pct">23%</span></div>
+    <div class="foot"><span>清理</span><span>卸载</span><span>主界面</span></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="cap">H3 · 环形仪表</div>
+  <div class="name">环形仪表</div>
+  <div class="desc">CPU 大环 + 内存/磁盘小环，像仪表盘；适合喜欢"看表"的人。</div>
+  <div class="stage"><div class="hud rings">
+    <div class="head">≋ 系统状态 <span class="live"><i class="dot"></i>实时监控中</span><span class="clock">21:33:12</span></div>
+    <div class="hero">
+      <div class="ring"><span class="v">34%</span><span class="l">CPU</span></div>
+      <div class="ringlabels"><div>8 核 · 已开机 11 小时</div><div style="color:#8FB0BB">内存 11 / 16 GB</div><div style="color:#8FB0BB">磁盘 82 / 460 GB</div></div>
+    </div>
+    <div class="half" style="justify-content:space-around">
+      <div style="text-align:center"><div class="smallring"><b>71%</b></div><div class="sub2" style="margin-top:6px">内存</div></div>
+      <div style="text-align:center"><div class="smallring" style="background:conic-gradient(#6ED3E8 0 18%,rgba(255,255,255,.10) 18%)"><b>18%</b></div><div class="sub2" style="margin-top:6px">磁盘</div></div>
+    </div>
+    <div class="tile net"><div><div class="k">上传</div><div class="v">4K/s</div></div><div><div class="k">下载</div><div class="v">8K/s</div></div></div>
+    <div class="tile procs"><div class="row"><span>TOP 进程</span><span>按 CPU</span></div>
+      <div class="p"><span>DeepSeek Harness</span><span class="pct">99%</span><span class="mem">899 MB</span></div>
+      <div class="p"><span>Render Helper</span><span class="pct">58%</span><span class="mem">637 MB</span></div></div>
+    <div class="actions"><div class="b">清理</div><div class="b">卸载</div><div class="b p">主界面</div></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="cap">H4 · 杂志排版</div>
+  <div class="name">杂志排版</div>
+  <div class="desc">巨大数字 + 细分隔线 + 小字标签，信息最少但最"设计感"。</div>
+  <div class="stage"><div class="hud edit">
+    <div class="head">≋ <span class="kicker">SYSTEM</span><span class="clock">21:33:12</span></div>
+    <h2>系统状态</h2>
+    <div class="huge">34<span>%</span></div>
+    <div class="sub2">CPU · 8 核 · 已开机 11 小时</div>
+    <div class="hr"></div>
+    <div class="pair"><span>内存</span><b>71% · 11 / 16 GB</b></div>
+    <div class="pair"><span>磁盘</span><b>18% · 82 / 460 GB</b></div>
+    <div class="pair"><span>网络</span><b>↑4K/s ↓8K/s</b></div>
+    <div class="hr"></div>
+    <div class="kicker">TOP 进程</div>
+    <div class="pair"><span>DeepSeek Harness</span><b>99%</b></div>
+    <div class="pair"><span>Render Helper</span><b>58%</b></div>
+    <div class="note">本地采样 · 无网络请求</div>
+    <div class="act"><span>清理 →</span><span>卸载 →</span><span>主界面 →</span></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="cap">H5 · 玻璃浮层</div>
+  <div class="name">玻璃浮层</div>
+  <div class="desc">一整块磨砂玻璃、发丝分隔线、胶囊按钮；最像 macOS 26 原生气质。</div>
+  <div class="stage"><div class="hud glass">
+    <div class="pill">≋ 系统状态 <span class="live"><i class="dot"></i>实时监控中</span><span class="clock">21:33:12</span></div>
+    <div class="m"><span class="n">CPU</span><div class="bar"><i style="width:34%;background:#6ED3E8"></i></div><span class="v">34<small>%</small></span></div>
+    <div class="m"><span class="n">内存</span><div class="bar"><i style="width:71%;background:#F2C94C"></i></div><span class="v">71<small>%</small></span></div>
+    <div class="m"><span class="n">磁盘</span><div class="bar"><i style="width:18%;background:#6ED3E8"></i></div><span class="v">18<small>%</small></span></div>
+    <div class="m"><span class="n">上传</span><span class="v" style="font-size:16px">4K/s</span></div>
+    <div class="m" style="border-bottom:none"><span class="n">下载</span><span class="v" style="font-size:16px">8K/s</span></div>
+    <div class="top"><div class="r"><span>1</span><span>DeepSeek Harness</span><span class="pct">99%</span></div>
+      <div class="r"><span>2</span><span>Render Helper</span><span class="pct">58%</span></div>
+      <div class="r"><span>3</span><span>Harness Helper</span><span class="pct">23%</span></div></div>
+    <div class="btns"><b>清理</b><b>卸载</b><b class="p">主界面</b></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="cap">H6 · 双栏数据</div>
+  <div class="name">双栏数据</div>
+  <div class="desc">5 个指标塞进 2×3 网格，一屏看全；适合想把 HUD 当"仪表盘"用。</div>
+  <div class="stage"><div class="hud twocol">
+    <div class="head">≋ 系统状态 <span class="live"><i class="dot"></i>实时监控中</span><span class="clock">21:33:12</span></div>
+    <div class="g">
+      <div class="cell"><div class="n">CPU</div><div class="v">34<small>%</small></div></div>
+      <div class="cell"><div class="n">内存</div><div class="v">71<small>%</small></div></div>
+      <div class="cell"><div class="n">磁盘</div><div class="v">18<small>%</small></div></div>
+      <div class="cell"><div class="n">上传</div><div class="v">4<small>K/s</small></div></div>
+      <div class="cell full"><div class="n">下载</div><div class="v">8<small>K/s</small></div></div>
+    </div>
+    <div class="tile procs"><div class="row"><span>TOP 进程</span><span>按 CPU</span></div>
+      <div class="p"><span>DeepSeek Harness</span><span class="pct">99%</span><span class="mem">899 MB</span></div>
+      <div class="p"><span>Render Helper</span><span class="pct">58%</span><span class="mem">637 MB</span></div>
+      <div class="p"><span>Harness Helper</span><span class="pct">23%</span><span class="mem">160 MB</span></div></div>
+    <div class="actions"><div class="b">清理</div><div class="b">卸载</div><div class="b p">主界面</div></div>
+  </div></div>
+</div>
+
+</div></body></html>

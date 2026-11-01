@@ -201,43 +201,79 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 SubHeader(text: "主题", trailing: "默认 水波玻璃")
 
-                ForEach(AppTheme.allCases) { item in
-                    Button {
-                        themeStore.theme = item
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(item.rawValue)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .frame(width: 22, height: 22)
-                                .background(
-                                    RoundedRectangle(cornerRadius: item == .paperOtter ? 4 : 7, style: .continuous)
-                                        .fill(item == theme ? theme.accent : Color.primary.opacity(0.07))
-                                )
-                                .foregroundStyle(item == theme ? (theme.isDark ? Color.black : Color.white) : Color.secondary)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name).font(.system(size: 12, weight: .medium))
-                                Text(item.tagline).font(.system(size: 10.5)).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            HStack(spacing: 4) {
-                                ForEach(0..<item.swatches.count, id: \.self) { i in
-                                    Circle()
-                                        .fill(item.swatches[i])
-                                        .frame(width: 10, height: 10)
-                                        .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
-                                }
-                            }
-                            if item == theme {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(theme.accent)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                ForEach(themeStore.themes) { item in
+                    themeRow(item)
                 }
+
+                Divider().opacity(0.5)
+                HStack(spacing: 10) {
+                    Button("打开主题目录") {
+                        if let dir = try? themeStore.ensureThemesDirectory() {
+                            NSWorkspace.shared.open(dir)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Button("重新加载") {
+                        themeStore.reload()
+                        ui.toast = "已重新加载主题（用户目录同名 id 会覆盖内置）"
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Spacer()
+                    Text("放 \(themeStore.themes.count - AppTheme.builtins.count) 个自定义主题 · 改完点重新加载")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+
+    private func themeRow(_ item: AppTheme) -> some View {
+        Button {
+            themeStore.theme = item
+        } label: {
+            HStack(spacing: 12) {
+                themeBadge(item)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name).font(.system(size: 12, weight: .medium))
+                    Text(item.tagline.isEmpty ? "自定义主题" : item.tagline)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                themeSwatches(item)
+                if item == theme {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(theme.accent)
+                }
+            }
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func themeBadge(_ item: AppTheme) -> some View {
+        Text(item.id)
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .frame(width: 22, height: 22)
+            .background(
+                RoundedRectangle(cornerRadius: item.id == "D" ? 4 : 7, style: .continuous)
+                    .fill(item == theme ? theme.accent : Color.primary.opacity(0.07))
+            )
+            .foregroundStyle(item == theme ? (theme.isDark ? Color.black : Color.white) : Color.secondary)
+    }
+
+    private func themeSwatches(_ item: AppTheme) -> some View {
+        HStack(spacing: 4) {
+            ForEach(Array(item.swatches.enumerated()), id: \.offset) { _, color in
+                Circle()
+                    .fill(color)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
             }
         }
     }

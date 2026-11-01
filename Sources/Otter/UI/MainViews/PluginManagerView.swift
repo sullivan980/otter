@@ -32,12 +32,20 @@ struct PluginSection: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    SubHeader(text: "HUD 插件 v1")
+                    SubHeader(text: "HUD 插件 v2")
                     Spacer()
                     Button {
                         openPluginsDirectory()
                     } label: {
                         Label("打开插件目录", systemImage: "folder")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Button {
+                        store.reload()
+                    } label: {
+                        Label("重新加载", systemImage: "arrow.clockwise")
                             .font(.system(size: 11))
                     }
                     .buttonStyle(.bordered)
@@ -52,7 +60,7 @@ struct PluginSection: View {
                     .controlSize(.small)
                 }
 
-                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。安装后立即启用并在 HUD 生效；内置插件不可删除，用户插件不能与内置插件同 id（会被拒绝）。")
+                Text("插件是声明式 HUD 样式包（manifest.json，无代码执行）。v2 新增可选 \"style\"：cardRadius / spacing / showSparkline / background，可微调间距、圆角与火花线。放进插件目录后会自动重载，无需重装应用。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

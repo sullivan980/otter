@@ -292,16 +292,22 @@ struct HUDCard<Content: View>: View {
 
     private var theme: AppTheme { ThemeStore.shared.theme }
 
+    /// 插件 v2 可覆盖卡片圆角。
+    private var radius: CGFloat {
+        if let r = PluginStore.shared.activePlugin()?.style?.cardRadius { return CGFloat(r) }
+        return max(6, theme.radius - 4)
+    }
+
     var body: some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .background(
-                RoundedRectangle(cornerRadius: max(6, theme.radius - 4), style: .continuous)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(theme.panel)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: max(6, theme.radius - 4), style: .continuous)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(theme.panelStroke, lineWidth: 1)
             )
     }

@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         bootstrapServices()
+        PluginWatcher.shared.start()
 
         // 验收/自测入口：OTTER_SELFTEST=metrics|clean|uninstall → 跑一次并退出
         if let mode = ProcessInfo.processInfo.environment["OTTER_SELFTEST"] {
