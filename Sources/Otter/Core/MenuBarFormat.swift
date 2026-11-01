@@ -3,6 +3,21 @@ import Foundation
 /// 菜单栏标题格式化（纯函数，供 UI 与验收自测共用）。
 /// 规范：百分比不补零；速率带单位；模块间单空格；顺序按用户设置。
 enum MenuBarFormat {
+    /// 菜单栏专用：速率去掉 /s，并按固定 4 字符宽度补空格，避免数值变化时菜单栏左右抖动。
+    static func menuBarValue(_ kind: MetricKind, _ m: SystemMetrics) -> String {
+        guard m.isReady else { return "  --" }
+        if kind.isRate {
+            let arrow = (kind == .up) ? "↑" : "↓"
+            let compact = Fmt.rate(kind.numericValue(m)).replacingOccurrences(of: "/s", with: "")
+            return arrow + padLeft(compact, 4)
+        }
+        return padLeft(Fmt.percent(kind.numericValue(m)), 4)
+    }
+
+    static func padLeft(_ s: String, _ width: Int) -> String {
+        let n = max(0, width - s.count)
+        return String(repeating: " ", count: n) + s
+    }
     static func plainTitle(ids: [String], metrics m: SystemMetrics, order: [String]) -> String {
         let sequence = order.filter { ids.contains($0) } + ids.filter { !order.contains($0) }
         var parts: [String] = []

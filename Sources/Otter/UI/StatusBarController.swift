@@ -175,8 +175,21 @@ final class StatusBarController: NSObject {
         item.length = NSStatusItem.variableLength
 
         let trend: MetricKind? = preset == .single ? kinds.first : nil
-        if let title = Self.fittedTitle(kinds: kinds, trend: trend, metrics: m, labelColor: labelColor, colorByLoad: Prefs.shared.colorByLoad) {
-            button.attributedTitle = title
+        let menuBarStyle = MenuBarStyleStore.shared.style
+        let menuBarShowIcon = Prefs.shared.menuBarShowIcon
+        let target = Self.fixedWidth(kinds: kinds, style: menuBarStyle, showIcon: menuBarShowIcon)
+        if let title = Self.fittedTitle(kinds: kinds, trend: trend, metrics: m, labelColor: labelColor, colorByLoad: Prefs.shared.colorByLoad, budget: target) {
+            let style = menuBarStyle
+            let showIcon = menuBarShowIcon
+            let iconWidth: CGFloat = showIcon ? 22 : 0
+            let pad = max(0, target - title.size().width - iconWidth - 14)
+            let out = NSMutableAttributedString(attributedString: title)
+            if pad > 0.5 {
+                let spacer = NSImage(size: NSSize(width: pad, height: 1))
+                out.append(MenuBarGlyph.attachment(spacer, font: NSFont.menuBarFont(ofSize: 0)))
+            }
+            button.attributedTitle = out
+            item.length = target
         } else {
             // 超出宽度预算且降级到底 → 图标
             applyIconOnly(button)
@@ -237,18 +250,65 @@ final class StatusBarController: NSObject {
                            style: MenuBarStyleStore.shared.style) ?? NSAttributedString(string: "")
     }
 
+    /// 固定菜单栏宽度：按「所有已启用指标 + 最坏情况数值」测算，数值变化/个别指标被裁都不会改宽度。
+    static func fixedWidth(kinds: [MetricKind], style: MenuBarStyle, showIcon: Bool) -> CGFloat {
+        // 取常见极值的最大标题宽度：0、几十%、100% 与 0B/s、数百K、G 级速率。
+        let samples: [SystemMetrics] = [
+            sampleMetrics(cpu: 9, mem: 9, disk: 9, up: 0, down: 0),
+            sampleMetrics(cpu: 42, mem: 76, disk: 18, up: 820 * 1024, down: 1.5 * 1024 * 1024 * 1024),
+            sampleMetrics(cpu: 100, mem: 100, disk: 100, up: 9.9 * 1024 * 1024 * 1024, down: 1.2 * 1024 * 1024),
+        ]
+        let widths = samples.map { m in
+            buildTitle(kinds: kinds,
+                       trend: nil,
+                       metrics: m,
+                       labelColor: MenuBarGlyph.currentLabelColor(),
+                       colorByLoad: false,
+                       style: style).size().width
+        }
+        return max(44, ceil((widths.max() ?? 0) + (showIcon ? 22 : 0) + 12))
+    }
+
+    private static func sampleMetrics(cpu: Double, mem: Double, disk: Double, up: Double, down: Double) -> SystemMetrics {
+        var m = SystemMetrics.zero
+        m.isReady = true
+        m.cpuPercent = cpu; m.memUsedPercent = mem; m.diskUsedPercent = disk
+        m.upBytesPerSec = up; m.downBytesPerSec = down
+        return m
+    }
+
     /// 验收辅助：按指定样式生成标题（自测用，不影响线上）。
     static func previewTitle(kinds: [MetricKind], style: MenuBarStyle, metrics: SystemMetrics) -> String {
-        (fittedTitle(kinds: kinds,
-                     trend: nil,
-                     metrics: metrics,
-                     labelColor: MenuBarGlyph.currentLabelColor(),
-                     colorByLoad: false,
-                     style: style)?.string) ?? ""
+        previewTitleAndWidth(kinds: kinds, style: style, metrics: metrics).0
+    }
+
+    /// 自测用：返回实际属性标题（含图标附件）。
+    static func previewAttributed(kinds: [MetricKind], style: MenuBarStyle, metrics: SystemMetrics) -> NSAttributedString? {
+        let budget = fixedWidth(kinds: kinds, style: style, showIcon: false)
+        return fittedTitle(kinds: kinds,
+                           trend: nil,
+                           metrics: metrics,
+                           labelColor: MenuBarGlyph.currentLabelColor(),
+                           colorByLoad: false,
+                           style: style,
+                           budget: budget)
+    }
+
+    /// 自测用：返回标题与像素宽度，验证固定宽度。
+    static func previewTitleAndWidth(kinds: [MetricKind], style: MenuBarStyle, metrics: SystemMetrics) -> (String, CGFloat) {
+        let budget = fixedWidth(kinds: kinds, style: style, showIcon: false)
+        guard let att = fittedTitle(kinds: kinds,
+                                    trend: nil,
+                                    metrics: metrics,
+                                    labelColor: MenuBarGlyph.currentLabelColor(),
+                                    colorByLoad: false,
+                                    style: style,
+                                    budget: budget) else { return ("", 0) }
+        return (att.string, att.size().width)
     }
 
     /// 按预算逐级降级，返回第一条放得下的标题
-    static func fittedTitle(kinds: [MetricKind], trend: MetricKind?, metrics m: SystemMetrics, labelColor: NSColor, colorByLoad: Bool, style: MenuBarStyle? = nil) -> NSAttributedString? {
+    static func fittedTitle(kinds: [MetricKind], trend: MetricKind?, metrics m: SystemMetrics, labelColor: NSColor, colorByLoad: Bool, style: MenuBarStyle? = nil, budget: CGFloat = ShellPrefs.menuBarWidthBudget) -> NSAttributedString? {
         var candidates: [(kinds: [MetricKind], withTrend: Bool)] = []
         if trend != nil {
             candidates.append((kinds, true))
@@ -269,7 +329,7 @@ final class StatusBarController: NSObject {
                                       labelColor: labelColor,
                                       colorByLoad: colorByLoad,
                                       style: style ?? MenuBarStyleStore.shared.style)
-            if att.size().width + 2 <= ShellPrefs.menuBarWidthBudget { return att }
+            if att.size().width + 2 <= budget { return att }
         }
         return nil
     }
@@ -316,7 +376,7 @@ final class StatusBarController: NSObject {
                 ]))
             }
             let color = ShellPrefs.menuBarColor(load: kind.load(m), colorByLoad: colorByLoad)
-            text(kind.display(m), color)
+            text(MenuBarFormat.menuBarValue(kind, m), color)
 
             let showTrend = style.showTrend && kinds.count == 1
             if showTrend {

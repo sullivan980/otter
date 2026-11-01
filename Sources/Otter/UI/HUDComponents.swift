@@ -148,7 +148,7 @@ enum ShellPrefs {
     static let changedNotification = Notification.Name("OtterShellPrefsChanged")
 
     /// 整条菜单栏宽度预算（pt）：超限按「去趋势 → 只留主指标 → 只留图标」降级
-    static let menuBarWidthBudget: CGFloat = 120
+    static let menuBarWidthBudget: CGFloat = 260
 
     /// 阈值：只有这两级，绿色永不出现
     static let warnThreshold = 60.0

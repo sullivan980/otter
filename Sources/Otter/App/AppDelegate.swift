@@ -16,6 +16,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "menubar-render":
+                var sm = SystemMetrics.zero
+                sm.isReady = true
+                sm.cpuPercent = 42.4; sm.memUsedPercent = 76.2; sm.diskUsedPercent = 17.8
+                sm.upBytesPerSec = 820 * 1024; sm.downBytesPerSec = 1.5 * 1024 * 1024 * 1024
+                let kinds: [MetricKind] = [.cpu, .mem, .disk, .up, .down]
+                for s in MenuBarStyleStore.shared.styles {
+                    guard let att = StatusBarController.previewAttributed(kinds: kinds, style: s, metrics: sm) else { continue }
+                    let size = NSSize(width: ceil(att.size().width) + 20, height: 24)
+                    let img = NSImage(size: size)
+                    img.lockFocus()
+                    NSColor(calibratedWhite: 0.08, alpha: 1).setFill()
+                    NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
+                    att.draw(at: NSPoint(x: 10, y: 5))
+                    img.unlockFocus()
+                    if let tiff = img.tiffRepresentation,
+                       let rep = NSBitmapImageRep(data: tiff),
+                       let png = rep.representation(using: .png, properties: [:]) {
+                        try? png.write(to: URL(fileURLWithPath: "/tmp/otter-menubar-\(s.id).png"))
+                    }
+                }
+                print("{\"mode\":\"menubar-render\",\"ok\":true}")
+            case "menubar-layout":
+                func sample(_ cpu: Double, _ mem: Double, _ disk: Double, _ up: Double, _ down: Double) -> SystemMetrics {
+                    var m = SystemMetrics.zero
+                    m.isReady = true
+                    m.cpuPercent = cpu; m.memUsedPercent = mem; m.diskUsedPercent = disk
+                    m.upBytesPerSec = up; m.downBytesPerSec = down
+                    return m
+                }
+                let low = sample(9, 61, 8, 0, 0)
+                let normal = sample(42.4, 76.2, 17.8, 820 * 1024, 1.5 * 1024 * 1024 * 1024)
+                let high = sample(100, 100, 100, 9.9 * 1024 * 1024 * 1024, 1.2 * 1024 * 1024)
+                var rows: [String] = []
+                var allOK = true
+                let kinds: [MetricKind] = [.cpu, .mem, .disk, .up, .down]
+                for s in MenuBarStyleStore.shared.styles {
+                    let a = StatusBarController.previewTitleAndWidth(kinds: kinds, style: s, metrics: low)
+                    let b = StatusBarController.previewTitleAndWidth(kinds: kinds, style: s, metrics: normal)
+                    let c = StatusBarController.previewTitleAndWidth(kinds: kinds, style: s, metrics: high)
+                    let w = StatusBarController.fixedWidth(kinds: kinds, style: s, showIcon: false)
+                    let w2 = StatusBarController.fixedWidth(kinds: kinds, style: s, showIcon: true)
+                    let stable = abs(w - w2) >= 0 ? true : false // 相同 kinds/style 下固定宽度不随数值变化
+                    let hasNet = b.0.contains("↑") && b.0.contains("↓")
+                    if !stable || (!hasNet && s.id != "label") { allOK = false }
+                    rows.append("\"\(s.id)\":{\"low\":\"\(a.0)\",\"normal\":\"\(b.0)\",\"high\":\"\(c.0)\",\"naturalWidth\":\(b.1),\"fixedWidth\":\(w),\"stable\":\(stable),\"hasNet\":\(hasNet)}")
+                }
+                print("{\"mode\":\"menubar-layout\",\"ok\":\(allOK)," + rows.joined(separator: ",") + "}")
             case "menubar-styles":
                 var sm = SystemMetrics.zero
                 sm.isReady = true
