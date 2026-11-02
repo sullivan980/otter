@@ -30,11 +30,10 @@ swiftc -O -sdk "$SDK" -target arm64-apple-macos13.0 -module-cache-path "$CACHE" 
 
 cp "$ROOT/Resources/Info.plist" "$STAGE/Contents/Info.plist"
 cp "$ROOT/Resources/icon.icns" "$STAGE/Contents/Resources/icon.icns"
-rsync -a "$ROOT/Resources/mole/" "$STAGE/Contents/Resources/mole/"
 if [ -d "$ROOT/Resources/plugins" ]; then
   rsync -a "$ROOT/Resources/plugins/" "$STAGE/Contents/Resources/plugins/"
 fi
-chmod +x "$STAGE/Contents/MacOS/Otter" "$STAGE/Contents/Resources/mole/mole"
+chmod +x "$STAGE/Contents/MacOS/Otter"
 codesign --force --deep --sign - "$STAGE" >/dev/null 2>&1 || true
 
 # 原子替换：编译失败时旧产物仍然可用

@@ -274,34 +274,12 @@ struct SettingsView: View {
         }
     }
 
-    private var cleanEngineBinding: Binding<String> {
-        Binding(
-            get: { Prefs.shared.cleanEngine },
-            set: { value in
-                Prefs.shared.cleanEngine = value
-                Services.shared.clean = value == "native" ? NativeCleanService() : CleanService()
-                ui.toast = value == "native" ? "已切换到原生清理引擎" : "已切换到 mole 引擎"
-            }
-        )
-    }
-
     // MARK: 通用
 
     private var generalSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 SubHeader(text: "通用")
-
-                settingRow(title: "清理引擎",
-                           desc: "原生：用户缓存/日志/废纸篓/Xcode/开发缓存，按勾选执行；mole：包含系统级缓存。") {
-                    Picker("", selection: cleanEngineBinding) {
-                        Text("原生").tag("native")
-                        Text("mole").tag("mole")
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 130)
-                }
 
                 settingRow(title: "登录时自动启动",
                            desc: "开机后常驻菜单栏，指标随系统启动。") {
@@ -699,11 +677,11 @@ struct SettingsView: View {
                         Text("Otter").font(.system(size: 16, weight: .bold))
                         KindTag(text: "v" + appVersion, color: .secondary)
                     }
-                    Text("原生 macOS 系统状态与清理工具 · 内置 mole 引擎")
+                    Text("原生 macOS 系统状态与清理工具 · 原生清理引擎")
                         .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                     HStack(spacing: 12) {
-                        Text("引擎 mole").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text("原生引擎").font(.system(size: 9.5)).foregroundStyle(.tertiary)
                         Text("菜单栏常驻 · HUD 400×520").font(.system(size: 9.5)).foregroundStyle(.tertiary)
                         Text("内存 footprint 目标 ≤25MB").font(.system(size: 9.5)).foregroundStyle(.tertiary)
                     }

@@ -4,7 +4,7 @@ import Foundation
 // MARK: - 清理分区（ViewModel）
 //
 // 流程：扫描（只读 dry-run）→ 分类勾选/全选/展开 → 二次确认 → 流式执行 → 结果/通知/错误态。
-// 注：v1 引擎（mole clean）按完整计划执行，勾选用于预览统计与确认文案，界面已明示。
+// 注：原生引擎按勾选条目执行；白名单路径在扫描与删除时都会跳过。
 final class CleanViewModel: ObservableObject {
     enum Phase {
         case idle, scanning, previewed, running, done, failed
@@ -26,14 +26,14 @@ final class CleanViewModel: ObservableObject {
     var serviceReady: Bool { Services.shared.clean != nil }
     var isBusy: Bool { phase == .scanning || phase == .running }
 
-    /// 对外展示「可释放」优先用 mole 摘要值（potentialBytes），没有摘要时回退分类合计。
+    /// 对外展示「可释放」：优先 potentialBytes，没有则用分类合计。
     var displayBytes: Int64 { plan?.potentialBytes ?? plan?.totalBytes ?? 0 }
     /// 展示条目数：优先摘要求，没有则按分类条目合计。
     var displayItemCount: Int {
         if let items = plan?.summaryItems { return items }
         return plan?.categories.reduce(0) { $0 + $1.items.count } ?? 0
     }
-    /// 分类合计与摘要差异较大时（mole 分类可能交叉计数），界面给出说明。
+    /// 分类合计与摘要差异较大时给出说明。
     var categorySumDiffersFromSummary: Bool {
         guard let plan = plan, let potential = plan.potentialBytes else { return false }
         return plan.totalBytes > potential + max(1_048_576, potential / 10)
@@ -207,11 +207,7 @@ final class CleanViewModel: ObservableObject {
 
     var confirmMessage: String {
         guard plan != nil else { return "" }
-        let n = displayItemCount
-        if Prefs.shared.cleanEngine == "native" {
-            return "将直接删除所勾选的 \(selectedCount()) 项，预计释放 \(Fmt.bytes(Double(selectedBytes())))。\n\n此操作不可撤销，确定继续？"
-        }
-        return "将清理预览中的全部 \(n) 项（mole 引擎按完整计划执行），预计释放 \(Fmt.bytes(Double(displayBytes)))。\n\n此操作不可撤销，确定继续？"
+        return "将直接删除所勾选的 \(selectedCount()) 项，预计释放 \(Fmt.bytes(Double(selectedBytes())))。\n\n此操作不可撤销，确定继续？"
     }
 
     func run() {
@@ -436,11 +432,6 @@ struct CleanView: View {
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.accentColor)
                         .monospacedDigit()
-                    if model.categorySumDiffersFromSummary {
-                        Text("mole 分类可能交叉计数，以摘要值为准")
-                            .font(.system(size: 9.5))
-                            .foregroundStyle(.tertiary)
-                    }
                 }
                 Divider().frame(height: 34)
                 StatChip(title: "分类", value: "\(model.plan?.categories.count ?? 0)", tint: .primary)
@@ -595,13 +586,11 @@ struct CleanView: View {
     private var bottomBar: some View {
         if model.phase == .previewed, let plan = model.plan, !plan.categories.isEmpty {
             BottomBar {
-                Text(Prefs.shared.cleanEngine == "native"
-                     ? "已选 \(model.selectedCount()) 项 · 预计释放 \(Fmt.bytes(Double(model.selectedBytes())))"
-                     : "已选 \(model.selectedCount()) 项 · 完整计划预计释放 \(Fmt.bytes(Double(model.displayBytes)))")
+                Text("已选 \(model.selectedCount()) 项 · 预计释放 \(Fmt.bytes(Double(model.selectedBytes())))")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(Prefs.shared.cleanEngine == "native" ? "原生引擎 · 按勾选执行" : "mole 引擎按完整计划执行")
+                Text("原生引擎 · 按勾选执行")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                 Button("清理…") { ui.confirmRun = true }

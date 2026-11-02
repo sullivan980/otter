@@ -3,7 +3,7 @@ import Foundation
 // 数据层实现的注入点（dev-data 负责：把真实服务装进 Services.shared）。
 // UI 在服务未就绪时显示「服务未就绪」。
 func bootstrapServices() {
-    Services.shared.clean = Prefs.shared.cleanEngine == "native" ? NativeCleanService() : CleanService()
+    Services.shared.clean = NativeCleanService()
     Services.shared.uninstall = UninstallService()
 }
 
@@ -11,9 +11,8 @@ func bootstrapServices() {
 ///
 /// 支持的模式（全部只读，红线：不执行真实清理/优化/删除）：
 /// - metrics：真实采样两次（间隔 1.2s 用于差分），打印一行 JSON 指标；
-/// - clean：真实跑一次 `mole clean --dry-run`，打印分类数/条目数/总大小；
+/// - clean：原生清理只读预览，打印分类数/条目数/总大小；
 /// - uninstall：列出应用并扫描第一个应用的关联残留；
-/// - parse：读取 OTTER_SELFTEST_INPUT 指定的 mole dry-run 原始文本，仅解析不执行；
 /// - trash-empty：对空数组走 UninstallService.trash 的守护路径，不触碰任何真实文件。
 func runSelfTest(mode: String) {
     switch mode {
@@ -21,13 +20,73 @@ func runSelfTest(mode: String) {
         runSelfTestClean()
     case "uninstall":
         runSelfTestUninstall()
-    case "parse":
-        runSelfTestParse()
     case "trash-empty":
         runSelfTestTrashEmpty()
     default:
         runSelfTestMetrics()
     }
+}
+
+// MARK: - uninstall-fixture（原生卸载扫描，仅 /tmp）
+
+func runSelfTestUninstallFixture() {
+    let fm = FileManager.default
+    let home = "/tmp/otter-uninstall-home"
+    let appsDir = "/tmp/otter-uninstall-apps"
+    try? fm.removeItem(atPath: home)
+    try? fm.removeItem(atPath: appsDir)
+    let bid = "com.example.ottertest"
+    let lib = home + "/Library"
+    for dir in [lib + "/Caches/\(bid)", lib + "/Preferences", lib + "/Application Support/\(bid)",
+                lib + "/LaunchAgents", lib + "/Group Containers/ABCDE12345.\(bid)",
+                appsDir + "/Foo.app/Contents"] {
+        try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+    }
+    fm.createFile(atPath: lib + "/Preferences/\(bid).plist", contents: Data("x".utf8))
+    fm.createFile(atPath: lib + "/LaunchAgents/\(bid).plist", contents: Data("x".utf8))
+    let info: [String: Any] = ["CFBundleIdentifier": bid, "CFBundleName": "Foo", "CFBundleExecutable": "Foo"]
+    if let data = try? PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0) {
+        try? data.write(to: URL(fileURLWithPath: appsDir + "/Foo.app/Contents/Info.plist"))
+    }
+
+    UninstallService.testHome = home
+    UninstallService.testAppDirectories = [appsDir]
+    defer {
+        UninstallService.testHome = nil
+        UninstallService.testAppDirectories = nil
+    }
+
+    let service = UninstallService()
+    service.callbackQueue = DispatchQueue(label: "com.ottermac.selftest.uninstallfixture", qos: .userInitiated)
+    let sem = DispatchSemaphore(value: 0)
+    var apps: [AppItem] = []
+    service.listApps { result in
+        if case .success(let list) = result { apps = list }
+        sem.signal()
+    }
+    guard sem.wait(timeout: .now() + 30) == .success, let app = apps.first else {
+        emitSelfTestJSON(["mode": "uninstall-fixture", "ok": false, "error": "枚举失败"])
+        return
+    }
+    var scan: UninstallScan?
+    service.scan(app) { result in
+        if case .success(let s) = result { scan = s }
+        sem.signal()
+    }
+    guard sem.wait(timeout: .now() + 30) == .success, let scan = scan else {
+        emitSelfTestJSON(["mode": "uninstall-fixture", "ok": false, "error": "扫描失败"])
+        return
+    }
+    let kinds = scan.leftovers.map { $0.kind }
+    let ok = apps.count == 1 && scan.leftovers.count >= 5 && kinds.contains("agent") && kinds.contains("data")
+    emitSelfTestJSON([
+        "mode": "uninstall-fixture",
+        "ok": ok,
+        "apps": apps.count,
+        "leftovers": scan.leftovers.count,
+        "kinds": kinds,
+        "totalBytes": scan.totalBytes
+    ])
 }
 
 // MARK: - clean-native-fixture（原生清理：预览→勾选→删除，仅 /tmp fixture）
@@ -124,10 +183,10 @@ private func runSelfTestMetrics() {
     emitSelfTestJSON(dict)
 }
 
-// MARK: - clean（真实 dry-run，只读）
+// MARK: - clean（原生只读预览）
 
 private func runSelfTestClean() {
-    let service = CleanService()
+    let service = NativeCleanService()
     service.callbackQueue = DispatchQueue(label: "com.ottermac.selftest.clean", qos: .userInitiated)
 
     let semaphore = DispatchSemaphore(value: 0)
@@ -139,80 +198,32 @@ private func runSelfTestClean() {
         semaphore.signal()
     })
 
-    let waitResult = semaphore.wait(timeout: .now() + 960)
+    let waitResult = semaphore.wait(timeout: .now() + 120)
     let duration = Int(Date().timeIntervalSince(started) * 1000)
 
     guard waitResult == .success, let result = outcome else {
-        emitSelfTestJSON(["mode": "clean", "ok": false, "error": "dry-run 超时（960s）", "duration_ms": duration])
+        emitSelfTestJSON(["mode": "clean", "ok": false, "error": "预览超时（120s）", "duration_ms": duration])
         return
     }
 
     switch result {
     case .failure(let error):
+        emitSelfTestJSON(["mode": "clean", "ok": false, "error": error.localizedDescription])
+    case .success(let plan):
         emitSelfTestJSON([
             "mode": "clean",
-            "ok": false,
-            "error": error.localizedDescription,
-            "duration_ms": duration
-        ])
-    case .success(let plan):
-        let itemCount = plan.categories.reduce(0) { $0 + $1.items.count }
-        let nonEmpty = plan.categories.filter { $0.bytes > 0 || !$0.items.isEmpty }.count
-        let summary = CleanService.parseSummary(plan.rawText)
-        var dict: [String: Any] = [
-            "mode": "clean",
             "ok": true,
+            "engine": "native",
             "categories": plan.categories.count,
-            "nonEmptyCategories": nonEmpty,
-            "items": itemCount,
+            "items": plan.categories.reduce(0) { $0 + $1.items.count },
             "totalBytes": plan.totalBytes,
+            "potential_bytes": plan.potentialBytes ?? plan.totalBytes,
             "duration_ms": duration,
             "categories_detail": plan.categories.map { category -> [String: Any] in
                 ["title": category.title, "bytes": category.bytes, "items": category.items.count]
             }
-        ]
-        if let summary = summary {
-            dict["summary_categories"] = summary.categories
-        }
-        // CleanPlan 已内置摘要值（potentialBytes/summaryItems），优先使用。
-        dict["summary_items"] = plan.summaryItems ?? summary?.items ?? 0
-        dict["potential_bytes"] = plan.potentialBytes ?? summary?.potentialBytes ?? plan.totalBytes
-        if let rawPath = ProcessInfo.processInfo.environment["OTTER_SELFTEST_RAW"], !rawPath.isEmpty {
-            try? plan.rawText.write(toFile: rawPath, atomically: true, encoding: .utf8)
-            dict["raw_dump"] = rawPath
-        }
-        emitSelfTestJSON(dict)
+        ])
     }
-}
-
-// MARK: - parse（仅解析给定文本，不运行 mole）
-
-private func runSelfTestParse() {
-    let env = ProcessInfo.processInfo.environment
-    guard let inputPath = env["OTTER_SELFTEST_INPUT"], !inputPath.isEmpty else {
-        emitSelfTestJSON(["mode": "parse", "ok": false, "error": "缺少 OTTER_SELFTEST_INPUT"])
-        return
-    }
-    guard let raw = try? String(contentsOfFile: inputPath, encoding: .utf8) else {
-        emitSelfTestJSON(["mode": "parse", "ok": false, "error": "无法读取输入文件：\(inputPath)"])
-        return
-    }
-
-    let plan = CleanService.parsePlan(raw)
-    let itemCount = plan.categories.reduce(0) { $0 + $1.items.count }
-    let summary = CleanService.parseSummary(raw)
-    var dict: [String: Any] = [
-        "mode": "parse",
-        "ok": true,
-        "categories": plan.categories.count,
-        "items": itemCount,
-        "totalBytes": plan.totalBytes,
-        "summary_categories": summary?.categories ?? 0,
-        "summary_items": plan.summaryItems ?? summary?.items ?? 0,
-        "potential_bytes": plan.potentialBytes ?? summary?.potentialBytes ?? plan.totalBytes
-    ]
-    dict["nonEmptyCategories"] = plan.categories.filter { $0.bytes > 0 || !$0.items.isEmpty }.count
-    emitSelfTestJSON(dict)
 }
 
 // MARK: - uninstall（只读扫描）

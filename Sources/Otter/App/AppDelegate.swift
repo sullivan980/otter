@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "uninstall-fixture":
+                runSelfTestUninstallFixture()
+                exit(0)
             case "clean-native-fixture":
                 runSelfTestNativeClean()
                 exit(0)

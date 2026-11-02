@@ -125,7 +125,7 @@ final class StatusBarController: NSObject {
     @objc private func openAbout() {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let credits = NSAttributedString(
-            string: "海獭图标：马蒂斯剪纸风格（Otter 原创绘制）\n清理引擎：mole\n本地运行 · 无网络请求",
+            string: "海獭图标：马蒂斯剪纸风格（Otter 原创绘制）\n原生清理引擎\n本地运行 · 无网络请求",
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11),
                 .foregroundColor: NSColor.secondaryLabelColor

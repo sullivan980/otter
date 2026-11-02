@@ -1,7 +1,7 @@
 # Otter 水獭 · 原生版（otter2）
 
 菜单栏常驻的 macOS 小工具：实时 CPU / 内存 / 磁盘 / 上传 / 下载，清理磁盘垃圾，干净卸载应用。
-内嵌 [Mole CLI](https://github.com/tw93/Mole)（GPL-3.0，`Resources/mole/`），无需预装。
+清理 / 卸载 / 空间扫描均为原生 Swift 实现，无第三方 CLI 依赖。
 
 ## 为什么重做
 
@@ -24,12 +24,13 @@ open build/Otter.app
 
 ## 功能
 
-- **菜单栏**：4 预设（极简 / CPU+内存 / 单指标+趋势 / 自定义）；百分比不补零、速率带单位、默认单色、≥85% 才红；120pt 宽度预算自动降级；深浅色模板图。
-- **HUD**（400×520，全屏 Space 可弹、不抢焦点）：5 指标 + 趋势 + TOP3 进程 + 清理/卸载/主界面。
-- **清理**：mole `clean --dry-run` 预览（分类/条目/大小，摘要优先）→ 二次确认 → 流式执行 → 系统通知。
-- **卸载**：应用列表（搜索/排序）→ 关联残留扫描（本体/缓存/偏好/数据/日志）→ 移入废纸篓。
+- **菜单栏**：自定义勾选（CPU/内存/磁盘/上传/下载）、固定宽度防抖动、5 种显示样式（数值/带名称/图标/中点/趋势）、獭图标可关；≥85% 才红。
+- **HUD**（400×520，全屏 Space 可弹、不抢焦点）：纵向堆叠模块（CPU 曲线 + 8 核、内存曲线、磁盘容量、上下行、TOP3）+ 清理/卸载/主界面。
+- **清理**：原生引擎扫描用户缓存/日志/废纸篓/Xcode/开发缓存 → 按勾选执行 → 系统通知；白名单保护。
+- **卸载**：应用列表（搜索/排序）→ 关联残留扫描（本体/缓存/偏好/数据/日志/启动项/共享容器）→ 移入废纸篓。
 - **磁盘**：只读目录分析（大目录/大文件，可下钻）。
-- **设置**：登录自启（SMAppService）、系统通知、菜单栏预设与自定义、HUD 插件 v1、权限检测、欢迎引导重看。
+- **空间**：安装包清理（dmg/pkg/xip…）+ 项目构建产物（node_modules/build/target…，7 天阈值）。
+- **设置**：登录自启（SMAppService）、系统通知、菜单栏样式、菜单栏插件、HUD 插件、清理白名单、权限检测、欢迎引导重看。
 - **插件 v1**：声明式 HUD manifest（`Resources/plugins/*.json` 内置；`~/Library/Application Support/Otter/plugins/<id>/manifest.json` 用户安装），设置页安装/启用/删除，非法 manifest 拒绝且回退内置。
 
 ## 架构
@@ -39,7 +40,7 @@ Sources/Otter/
 ├── App/          main / AppDelegate / AppState / Onboarding
 ├── Core/         Models / Formatters / Prefs / Services(协议) / Plugins / MenuBarFormat
 ├── Metrics/      RealMetricsSampler（host_processor_info / host_statistics64 / statfs / getifaddrs / libproc）
-├── Mole/         MoleRunner / CleanService / UninstallService
+├── Engine/       NativeCleanService / UninstallService / SpaceService
 ├── Services/     Bootstrap / LoginItem / Notifications
 └── UI/           StatusBarController / HUD* / MainWindowController / MainViews/
 ```

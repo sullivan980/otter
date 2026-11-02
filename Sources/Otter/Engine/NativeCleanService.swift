@@ -1,5 +1,20 @@
 import Foundation
 
+/// 清理服务错误。
+enum CleanServiceError: LocalizedError {
+    case busy
+    case cancelled
+    case failed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .busy: return "已有清理任务在运行，请等待完成或先取消"
+        case .cancelled: return "已取消清理"
+        case .failed(let message): return message
+        }
+    }
+}
+
 /// 原生清理服务（阶段 2）：只处理用户级安全目录，支持按勾选项执行。
 /// 不调用 mole；系统级缓存暂不包含（后续阶段补 sudo helper）。
 final class NativeCleanService: CleanServicing {

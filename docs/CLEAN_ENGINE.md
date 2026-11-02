@@ -1,9 +1,8 @@
-# 清理引擎（原生 / mole）
+# 清理引擎（原生，0.8 起）
 
-设置 → 通用 → 清理引擎可切换，默认原生。
+0.8 起 mole 已从应用内移除，清理 / 卸载 / 空间扫描全部为原生 Swift 实现。
 
-## 原生引擎（native）
-只处理用户级安全目录，按勾选执行：
+## 清理分类
 
 | 分类 | 路径 |
 |---|---|
@@ -13,12 +12,21 @@
 | Xcode 缓存 | ~/Library/Developer/Xcode/DerivedData、CoreSimulator/Caches |
 | 开发缓存 | ~/.npm/_cacache、~/.gradle/caches |
 
-- 白名单路径自动跳过；删除确认后不可恢复。
-- 暂不包含需要 root 的系统缓存（/Library/Caches 等），这部分仍可用 mole。
+- 只列实际占用 >0 的项；白名单路径跳过。
+- 按勾选条目执行；确认后直接删除，不可恢复。
+- 系统级缓存（/Library/Caches 等）暂未包含（需要 root helper，后续阶段补）。
 
-## mole 引擎
-调用内置 mole，包含系统级缓存；但 CLI 不支持按分类执行，勾选只用于统计与确认。
+## 卸载
+- 应用列表来自 /Applications、~/Applications。
+- 残留：应用本体、Caches、Preferences、Application Support、Logs、
+  Saved Application State、WebKit、HTTPStorages、Containers、Group Containers、
+  Application Scripts、LaunchAgents。
+- 移入废纸篓，可还原。
+
+## 空间
+见 docs/SPACE.md。
 
 ## 自测
-- OTTER_SELFTEST=clean-native-fixture：/tmp 下创建两项，预览→全选→删除，
-  断言 freedBytes ≥ 2,000,000 且目录消失。
+- OTTER_SELFTEST=clean：原生清理只读预览（分类/条目/字节）。
+- OTTER_SELFTEST=clean-native-fixture：/tmp 预览→全选→删除，断言 bytes 与目录消失。
+- OTTER_SELFTEST=uninstall-fixture：/tmp 假应用 + 残留，断言应用/残留/启动项被识别。

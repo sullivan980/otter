@@ -39,6 +39,12 @@ final class UninstallService: UninstallServicing {
     var callbackQueue: DispatchQueue = .main
 
     private let fileManager = FileManager.default
+
+    /// 自测用：把 home / 应用目录指向 fixture，避免触碰真实系统。
+    static var testHome: String?
+    static var testAppDirectories: [String]?
+
+    private var homeDirectory: String { Self.testHome ?? NSHomeDirectory() }
     private let ioQueue = DispatchQueue(label: "com.ottermac.uninstall.io", qos: .userInitiated)
 
     /// 残留候选目录（相对 ~/Library）。
@@ -108,8 +114,8 @@ final class UninstallService: UninstallServicing {
     // MARK: - 应用枚举
 
     private func enumerateApps() -> [AppItem] {
-        let home = NSHomeDirectory()
-        let directories = ["/Applications", home + "/Applications"]
+        let home = homeDirectory
+        let directories = Self.testAppDirectories ?? ["/Applications", home + "/Applications"]
         var seen = Set<String>()
         var apps: [AppItem] = []
 
@@ -161,7 +167,7 @@ final class UninstallService: UninstallServicing {
             throw UninstallServiceError.appNotFound(app.path)
         }
 
-        let home = NSHomeDirectory()
+        let home = homeDirectory
         let library = home + "/Library"
         let appFileName = (app.path as NSString).lastPathComponent
         let appName = appFileName.hasSuffix(".app") ? String(appFileName.dropLast(4)) : appFileName
@@ -188,6 +194,18 @@ final class UninstallService: UninstallServicing {
             add("\(library)/Saved Application State/\(bundleId).savedState", "state", "窗口状态")
             add("\(library)/Containers/\(bundleId)", "data", "沙盒数据")
             add("\(library)/Group Containers/group.\(bundleId)", "data", "共享容器")
+            add("\(library)/Cookies/\(bundleId).binarycookies", "data", "Cookie")
+            add("\(library)/HTTPStorages/\(bundleId).binarycookies", "data", "网络存储")
+            add("\(library)/Application Scripts/\(bundleId)", "data", "应用脚本")
+            add("\(library)/LaunchAgents/\(bundleId).plist", "agent", "启动项")
+            add("\(library)/LaunchAgents/\(appName).plist", "agent", "启动项")
+
+            // Group Containers 常见命名带 teamId 前缀，按 bundleId 模糊扫一层。
+            if let groups = try? fileManager.contentsOfDirectory(atPath: "\(library)/Group Containers") {
+                for g in groups where g.contains(bundleId) {
+                    add("\(library)/Group Containers/\(g)", "data", "共享容器")
+                }
+            }
         }
 
         var items: [LeftoverItem] = []
