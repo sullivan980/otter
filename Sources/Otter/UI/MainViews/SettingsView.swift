@@ -178,6 +178,7 @@ struct SettingsView: View {
                     whitelistSection
                     cleanRulesSection
                     updateSection
+                    diagnosticsSection
                     PermissionSection(model: permissions)
                     PluginSection(store: plugins)
                     aboutSection
@@ -651,6 +652,44 @@ struct SettingsView: View {
                         ui.toast = "已重新加载清理规则"
                     }
                     .buttonStyle(.bordered).controlSize(.small)
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    // MARK: 诊断
+
+    private var diagnosticsSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "诊断与日志", trailing: "不上传任何数据")
+                Text("导出内容：版本、系统/硬件、实时指标、偏好、插件加载错误、最近 100 行操作日志、Otter 崩溃报告列表。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button("保存诊断报告") {
+                        if let url = DiagnosticsService.export(metrics: state.metrics, state: state) {
+                            ui.toast = "已保存：\(url.path)"
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        } else {
+                            ui.toast = "保存失败"
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("复制诊断文本") {
+                        let text = DiagnosticsService.text(metrics: state.metrics, state: state)
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString(text, forType: .string)
+                        ui.toast = "诊断文本已复制"
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                     Spacer()
                 }
             }

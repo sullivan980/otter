@@ -23,6 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "diagnostics":
+                let text = DiagnosticsService.text(metrics: nil, state: nil)
+                let ok = text.contains("Otter 诊断报告") && text.contains("版本:") && text.contains("## 最近日志")
+                print("{\"mode\":\"diagnostics\",\"ok\":\(ok),\"chars\":\(text.count),\"crashes\":\(DiagnosticsService.crashReports().count)}")
+                exit(0)
             case "update-check":
                 let gh = """
                 {"tag_name":"v9.9.9","html_url":"https://example.com/release","body":"notes","assets":[{"name":"Otter.dmg","browser_download_url":"https://example.com/Otter.dmg"}]}

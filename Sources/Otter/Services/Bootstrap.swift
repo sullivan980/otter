@@ -5,6 +5,8 @@ import Foundation
 func bootstrapServices() {
     Services.shared.clean = NativeCleanService()
     Services.shared.uninstall = UninstallService()
+    let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    OtterLog.shared.add("启动 Otter v\(v)")
 }
 
 /// 验收自测入口（AppDelegate 在 OTTER_SELFTEST 存在时调用，完成后自行 exit）。

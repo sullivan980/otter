@@ -21,6 +21,7 @@ final class OperationResultCenter: ObservableObject {
     func post(kind: OperationResult.Kind, title: String, message: String, autoDismiss: TimeInterval = 8) {
         dismissWork?.cancel()
         current = OperationResult(kind: kind, title: title, message: message)
+        OtterLog.shared.add("结果卡：\(title) - \(message)")
         guard autoDismiss > 0 else { return }
         let work = DispatchWorkItem { [weak self] in self?.dismiss() }
         dismissWork = work
