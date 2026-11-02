@@ -158,8 +158,6 @@ final class SettingsUIState: ObservableObject {
     @Published var alertDuration = Prefs.shared.alertDuration
     @Published var lowDiskReminder = Prefs.shared.lowDiskReminderEnabled
     @Published var cleanReminderDays = Prefs.shared.cleanReminderDays
-    @Published var desktopWidget = Prefs.shared.desktopWidgetVisible
-    @Published var widgetOnTop = Prefs.shared.widgetAlwaysOnTop
     @Published var trashCount = 0
     @Published var trashBytes: Int64 = 0
     @Published var trashBatches = 0
@@ -192,7 +190,6 @@ struct SettingsView: View {
                     whitelistSection
                     cleanRulesSection
                     updateSection
-                    widgetSection
                     remindersSection
                     alertsSection
                     diagnosticsSection
@@ -723,37 +720,6 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                     Spacer()
-                }
-            }
-        }
-    }
-
-    // MARK: 桌面小组件
-
-    private var widgetSection: some View {
-        PanelCard {
-            VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "桌面小组件", trailing: "实时")
-                Text("无边框浮层，比菜单栏宽，常驻显示 CPU / 内存 / 磁盘 / 上下行 / 核心负载；可拖动，位置会记住。")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack {
-                    Toggle("显示桌面小组件", isOn: $ui.desktopWidget)
-                        .toggleStyle(.switch)
-                        .font(.system(size: 11.5))
-                        .onChange(of: ui.desktopWidget) { value in
-                            Prefs.shared.desktopWidgetVisible = value
-                            DesktopWidgetController.shared.setVisible(value)
-                        }
-                    Spacer()
-                    Toggle("始终置顶", isOn: $ui.widgetOnTop)
-                        .toggleStyle(.switch)
-                        .font(.system(size: 11))
-                        .onChange(of: ui.widgetOnTop) { value in
-                            Prefs.shared.widgetAlwaysOnTop = value
-                            DesktopWidgetController.shared.applyLevel()
-                        }
                 }
             }
         }

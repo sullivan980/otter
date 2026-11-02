@@ -97,10 +97,6 @@ final class StatusBarController: NSObject {
         menu.addItem(pause)
 
         menu.addItem(.separator())
-        let widget = NSMenuItem(title: "桌面小组件", action: #selector(toggleWidget), keyEquivalent: "")
-        widget.target = self
-        widget.state = DesktopWidgetController.shared.isVisible ? .on : .off
-        menu.addItem(widget)
         addItem(menu, "欢迎引导…", #selector(openOnboarding), "")
         addItem(menu, "检查更新…", #selector(checkUpdates), "")
         addItem(menu, "关于 Otter", #selector(openAbout), "")
@@ -126,10 +122,6 @@ final class StatusBarController: NSObject {
         state.setPaused(!state.isPaused)
         refresh(force: true)
     }
-    @objc private func toggleWidget() {
-        DesktopWidgetController.shared.setVisible(!DesktopWidgetController.shared.isVisible)
-    }
-
     @objc private func openOnboarding() { OnboardingController.shared.show(force: true) }
     @objc private func checkUpdates() {
         let feed = Prefs.shared.updateFeedURL
