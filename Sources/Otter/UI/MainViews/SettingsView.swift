@@ -156,6 +156,8 @@ final class SettingsUIState: ObservableObject {
     @Published var alertMem = Prefs.shared.alertMem
     @Published var alertDisk = Prefs.shared.alertDisk
     @Published var alertDuration = Prefs.shared.alertDuration
+    @Published var lowDiskReminder = Prefs.shared.lowDiskReminderEnabled
+    @Published var cleanReminderDays = Prefs.shared.cleanReminderDays
     @Published var trashCount = 0
     @Published var trashBytes: Int64 = 0
     @Published var trashBatches = 0
@@ -188,6 +190,7 @@ struct SettingsView: View {
                     whitelistSection
                     cleanRulesSection
                     updateSection
+                    remindersSection
                     alertsSection
                     diagnosticsSection
                     PermissionSection(model: permissions)
@@ -717,6 +720,37 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                     Spacer()
+                }
+            }
+        }
+    }
+
+    // MARK: 提醒
+
+    private var remindersSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "提醒")
+                HStack {
+                    Toggle("低磁盘提醒", isOn: $ui.lowDiskReminder)
+                        .toggleStyle(.switch)
+                        .font(.system(size: 11.5))
+                        .onChange(of: ui.lowDiskReminder) { value in Prefs.shared.lowDiskReminderEnabled = value }
+                    Spacer()
+                    Text("超过告警阈值时每天最多提醒一次").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                }
+                HStack {
+                    Text("定期清理提醒").font(.system(size: 11.5))
+                    Spacer()
+                    Picker("", selection: $ui.cleanReminderDays) {
+                        Text("关闭").tag(0)
+                        Text("7 天").tag(7)
+                        Text("14 天").tag(14)
+                        Text("30 天").tag(30)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 260)
+                    .onChange(of: ui.cleanReminderDays) { value in Prefs.shared.cleanReminderDays = value }
                 }
             }
         }

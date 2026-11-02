@@ -2,6 +2,7 @@ import SwiftUI
 
 final class MaintenanceViewModel: ObservableObject {
     @Published private(set) var report = MaintenanceReport()
+    @Published private(set) var battery = BatteryReport()
     @Published private(set) var isRefreshing = false
     @Published var errorText: String?
     @Published var dnsRunning = false
@@ -32,8 +33,10 @@ final class MaintenanceViewModel: ObservableObject {
         errorText = nil
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let r = MaintenanceService.collect()
+            let b = BatteryService.read()
             DispatchQueue.main.async {
                 self?.report = r
+                self?.battery = b
                 self?.isRefreshing = false
             }
         }
@@ -64,6 +67,7 @@ struct MaintenanceView: View {
                         diskCard
                     }
                     HStack(alignment: .top, spacing: 12) {
+                        batteryCard
                         infoCard("Spotlight", icon: "magnifyingglass", rows: [
                             ("索引状态", model.report.spotlight),
                         ])
@@ -89,6 +93,23 @@ struct MaintenanceView: View {
         } message: {
             Text("会请求一次管理员授权，并短暂影响域名解析；不会删除任何文件。")
         }
+    }
+
+    private var batteryCard: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 8) {
+                cardTitle("电池", icon: "battery.75")
+                if model.battery.present {
+                    row("健康度", model.battery.healthPercent.map { String(format: "%.1f%%", $0) } ?? "—")
+                    row("循环次数", model.battery.cycleCount.map(String.init) ?? "—")
+                    row("温度", model.battery.temperatureC.map { String(format: "%.1f°C", $0) } ?? "—")
+                    row("状态", model.battery.charging ? "充电中" : (model.battery.externalPower ? "外接电源" : "电池供电"))
+                } else {
+                    Text("未检测到电池（台式机）").font(.system(size: 10.5)).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var diskCard: some View {

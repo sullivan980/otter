@@ -23,6 +23,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "battery":
+                let b = BatteryService.read()
+                print("{\"mode\":\"battery\",\"ok\":true,\"present\":\(b.present),\"cycles\":\(b.cycleCount ?? -1),\"health\":\(b.healthPercent ?? -1),\"temp\":\(b.temperatureC ?? -1)}")
+                exit(0)
+            case "reminders":
+                let now = Date(timeIntervalSince1970: 2_000_000)
+                let cleanDue = ReminderService.shouldRemindClean(lastCleanAt: now.timeIntervalSince1970 - 8 * 86400, intervalDays: 7, now: now)
+                let cleanNotDue = ReminderService.shouldRemindClean(lastCleanAt: now.timeIntervalSince1970 - 3 * 86400, intervalDays: 7, now: now)
+                let lowDue = ReminderService.shouldRemindLowDisk(diskPercent: 92, threshold: 90, lastRemindedAt: 0, now: now)
+                let lowCooldown = ReminderService.shouldRemindLowDisk(diskPercent: 92, threshold: 90, lastRemindedAt: now.timeIntervalSince1970 - 3600, now: now)
+                let ok = cleanDue && !cleanNotDue && lowDue && !lowCooldown
+                print("{\"mode\":\"reminders\",\"ok\":\(ok)}")
+                exit(0)
             case "safe-trash":
                 let fm = FileManager.default
                 let home = "/tmp/otter-safe-trash-home"

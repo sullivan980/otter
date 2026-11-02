@@ -5,6 +5,7 @@
 ## 检测项
 - 系统：macOS 版本、架构、机型、已运行时间
 - 磁盘：卷名、SSD/HDD、SMART 状态、可用 / 总量
+- 电池：健康度、循环次数、温度、供电状态（台式机显示未检测到）
 - Spotlight：mdutil 索引状态
 - 本地快照：tmutil 快照数量
 - 启动项：用户/系统 LaunchAgents 与系统 LaunchDaemons 数量

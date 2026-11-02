@@ -57,6 +57,7 @@ final class AppState: ObservableObject {
             DispatchQueue.main.async {
                 self?.metrics = m
                 self?.checkAlerts(m)
+                ReminderService.check(metrics: m)
             }
         }
     }
