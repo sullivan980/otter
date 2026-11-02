@@ -114,7 +114,9 @@ final class CleanViewModel: ObservableObject {
                 case .success(let plan):
                     self.plan = plan
                     let withItems = plan.categories.filter { !$0.items.isEmpty }
-                    self.selected = Set(withItems.flatMap { cat in cat.items.map { self.key(cat, $0) } })
+                    // 系统缓存需要管理员授权，默认不勾选，避免一进清理就弹密码框。
+                    let selectable = withItems.filter { $0.id != "system_caches" }
+                    self.selected = Set(selectable.flatMap { cat in cat.items.map { self.key(cat, $0) } })
                     self.expanded = Set(withItems.map { $0.id })
                     self.phase = .previewed
                     if plan.categories.isEmpty {
@@ -207,7 +209,12 @@ final class CleanViewModel: ObservableObject {
 
     var confirmMessage: String {
         guard plan != nil else { return "" }
-        return "将直接删除所勾选的 \(selectedCount()) 项，预计释放 \(Fmt.bytes(Double(selectedBytes())))。\n\n此操作不可撤销，确定继续？"
+        let hasSystem = selected.contains { $0.hasPrefix("system_caches|") }
+        var text = "将直接删除所勾选的 \(selectedCount()) 项，预计释放 \(Fmt.bytes(Double(selectedBytes())))。\n\n此操作不可撤销，确定继续？"
+        if hasSystem {
+            text += "\n\n系统缓存会请求一次管理员授权。"
+        }
+        return text
     }
 
     func run() {

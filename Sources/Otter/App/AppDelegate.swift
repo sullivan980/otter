@@ -16,6 +16,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "priv-guard":
+                let input = ["/Library/Caches/com.example.test",
+                             "/Library/Caches/../etc/passwd",
+                             "/etc/passwd",
+                             "/Library/Caches"]
+                let safe = PrivilegedCleaner.sanitize(paths: input)
+                let body = PrivilegedCleaner.scriptBody(for: input)
+                let ok = safe == ["/Library/Caches/com.example.test"]
+                    && body.contains("rm -rf -- '/Library/Caches/com.example.test'")
+                    && !body.contains("/etc/passwd")
+                print("{\"mode\":\"priv-guard\",\"ok\":\(ok),\"safe\":\(safe.count),\"rejected\":\(input.count - safe.count)}")
+                exit(0)
             case "uninstall-fixture":
                 runSelfTestUninstallFixture()
                 exit(0)

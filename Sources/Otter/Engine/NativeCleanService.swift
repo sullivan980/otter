@@ -31,6 +31,7 @@ final class NativeCleanService: CleanServicing {
         let title: String
         let roots: [URL]
         let children: Bool   // true: 清理 root 下每一项；false: 清理 root 本身
+        var requiresRoot: Bool = false
     }
 
     private func specs() -> [Spec] {
@@ -51,6 +52,8 @@ final class NativeCleanService: CleanServicing {
                 u("~/.npm/_cacache"),
                 u("~/.gradle/caches"),
             ], children: false),
+            Spec(id: "system_caches", title: "系统缓存（需授权）",
+                 roots: [URL(fileURLWithPath: "/Library/Caches")], children: true, requiresRoot: true),
         ]
     }
 
@@ -131,8 +134,11 @@ final class NativeCleanService: CleanServicing {
                 let inRoot = allowedRoots.contains { std == $0 || std.hasPrefix($0 + "/") }
                 return inRoot && !WhitelistStore.shared.contains(std)
             }
+            let systemPrefix = "/Library/Caches"
+            let systemPaths = targets.filter { $0 == systemPrefix || $0.hasPrefix(systemPrefix + "/") }
+            let normalPaths = targets.filter { !systemPaths.contains($0) }
 
-            for path in targets {
+            for path in normalPaths {
                 if self.isCancelled() { break }
                 let url = URL(fileURLWithPath: path)
                 let bytes = SpaceScanner.allocatedSize(of: url)
@@ -145,6 +151,15 @@ final class NativeCleanService: CleanServicing {
                     errors.append("\(url.lastPathComponent)：\(error.localizedDescription)")
                 }
                 self.deliver { onProgress(CleanProgress(phase: "清理中 \(removed)/\(targets.count)", line: errors.last ?? lines.last ?? "")) }
+            }
+
+            if !systemPaths.isEmpty && !self.isCancelled() {
+                self.deliver { onProgress(CleanProgress(phase: "请求管理员权限…", line: "")) }
+                let privileged = PrivilegedCleaner.remove(paths: systemPaths)
+                freed += privileged.bytes
+                removed += privileged.removed
+                errors.append(contentsOf: privileged.errors)
+                lines.append("系统缓存：删除 \(privileged.removed) 项（\(Fmt.bytes(Double(privileged.bytes)))）")
             }
 
             self.end()
