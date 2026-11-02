@@ -18,6 +18,7 @@ final class DiskViewModel: ObservableObject {
     enum ViewMode: String, CaseIterable, Identifiable {
         case items = "项目"
         case largeFiles = "大文件"
+        case duplicates = "重复文件"
         var id: String { rawValue }
     }
 
@@ -34,14 +35,17 @@ final class DiskViewModel: ObservableObject {
     @Published private(set) var truncated = false
     @Published private(set) var errorText: String?
     @Published var viewMode: ViewMode = .items
+    @Published var largeFileThreshold: Int64 = 20 * 1024 * 1024
+    @Published private(set) var duplicateGroups: [DuplicateGroup] = []
+    @Published private(set) var isScanningDuplicates = false
+    @Published private(set) var duplicateProgress = ""
+    @Published var expandedDuplicates: Set<String> = []
 
     /// 上限：避免扫全盘时无限跑（按“文件数”截断，并显式提示结果不完整）。
     let maxFiles = 400_000
     private let lock = NSLock()
     private var generationValue = 0
     private var didAutoStart = false
-
-    static let largeFileThreshold: Int64 = 20 * 1024 * 1024
 
     init() {
         let env = ProcessInfo.processInfo.environment["OTTER_DISK_PATH"]
@@ -119,6 +123,40 @@ final class DiskViewModel: ObservableObject {
 
     // MARK: 扫描
 
+    func scanDuplicates() {
+        guard !scannedPath.isEmpty, !isScanningDuplicates else { return }
+        isScanningDuplicates = true
+        duplicateGroups = []
+        duplicateProgress = "准备扫描…"
+        let root = scannedPath
+        let gen = generationValue + 1
+        generationValue = gen
+        DuplicateScanner.scan(root: URL(fileURLWithPath: root), progress: { [weak self] line in
+            DispatchQueue.main.async {
+                guard let self = self, self.generationValue == gen else { return }
+                self.duplicateProgress = line
+            }
+        }, isCancelled: { [weak self] in
+            guard let self = self else { return true }
+            return self.generationValue != gen
+        }, completion: { [weak self] groups in
+            guard let self = self, self.generationValue == gen else { return }
+            self.isScanningDuplicates = false
+            self.duplicateGroups = groups
+            self.duplicateProgress = ""
+        })
+    }
+
+    func trashDuplicates(_ group: DuplicateGroup) {
+        let rest = Array(group.files.dropFirst())
+        guard !rest.isEmpty else { return }
+        let moved = SafeTrashService.shared.move(rest)
+        duplicateGroups.removeAll { $0.id == group.id }
+        OperationResultCenter.shared.post(kind: moved.errors.isEmpty ? .success : .warning,
+                                          title: "重复文件已处理",
+                                          message: "移入 Otter 回收站 \(moved.moved) 个副本（\(Fmt.bytes(Double(moved.bytes)))）")
+    }
+
     func scan(_ path: String) {
         let expanded = (path as NSString).expandingTildeInPath
         var isDir: ObjCBool = false
@@ -133,15 +171,19 @@ final class DiskViewModel: ObservableObject {
         errorText = nil
         entries = []
         largeFiles = []
+        duplicateGroups = []
+        duplicateProgress = ""
         totalBytes = 0
         totalFiles = 0
         truncated = false
         progressText = "准备扫描…"
         viewMode = .items
+        let threshold = largeFileThreshold
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            let result = Self.walk(url: url, limit: self.maxFiles, isCancelled: { !self.isCurrent(generation) }) { files, bytes in
+            let result = Self.walk(url: url, limit: self.maxFiles, threshold: threshold,
+                                   isCancelled: { !self.isCurrent(generation) }) { files, bytes in
                 DispatchQueue.main.async {
                     guard self.isCurrent(generation), self.isScanning else { return }
                     self.totalFiles = files
@@ -195,6 +237,7 @@ final class DiskViewModel: ObservableObject {
 
     static func walk(url: URL,
                              limit: Int,
+                             threshold: Int64 = 20 * 1024 * 1024,
                              isCancelled: () -> Bool,
                              onProgress: @escaping (Int, Int64) -> Void) -> WalkResult {
         var result = WalkResult()
@@ -270,7 +313,7 @@ final class DiskViewModel: ObservableObject {
             agg.bytes += size
             aggregates[firstComponent] = agg
 
-            if !isDir, size >= DiskViewModel.largeFileThreshold, large.count < 4000 {
+            if !isDir, size >= threshold, large.count < 4000 {
                 large.append(DiskEntry(id: item.path, name: item.lastPathComponent,
                                        path: item.path, isDir: false, bytes: size))
             }
@@ -448,14 +491,19 @@ struct DiskView: View {
             Spacer()
             Picker("", selection: Binding(
                 get: { model.viewMode },
-                set: { model.viewMode = $0 }
+                set: { mode in
+                    model.viewMode = mode
+                    if mode == .duplicates && model.duplicateGroups.isEmpty && !model.isScanningDuplicates {
+                        model.scanDuplicates()
+                    }
+                }
             )) {
                 ForEach(DiskViewModel.ViewMode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 150)
+            .frame(width: 230)
             .labelsHidden()
         }
     }
@@ -482,29 +530,113 @@ struct DiskView: View {
                            message: "大目录可能需要一些时间，可继续操作其他分区。")
                 .frame(maxHeight: .infinity)
         } else {
-            ScrollView {
-                LazyVStack(spacing: 3) {
-                    if model.viewMode == .items {
-                        ForEach(model.entries) { entry in
-                            entryRow(entry)
+            if model.viewMode == .duplicates {
+                duplicatesList
+            } else {
+                if model.viewMode == .largeFiles {
+                    HStack(spacing: 8) {
+                        Text("阈值").font(.system(size: 10.5)).foregroundStyle(.secondary)
+                        Menu(Fmt.bytes(Double(model.largeFileThreshold))) {
+                            ForEach([20, 100, 500, 1024], id: \.self) { mb in
+                                Button("\(mb) MB") {
+                                    model.largeFileThreshold = Int64(mb) * 1024 * 1024
+                                    model.rescan()
+                                }
+                            }
                         }
-                    } else {
-                        if model.largeFiles.isEmpty {
-                            Text("未发现大于 \(Fmt.bytes(Double(DiskViewModel.largeFileThreshold))) 的单个文件")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 18)
-                        } else {
-                            ForEach(model.largeFiles) { entry in
+                        .menuStyle(.borderlessButton)
+                        .frame(width: 90)
+                        Spacer()
+                        Text("扫描时收集，修改阈值会重新扫描").font(.system(size: 9)).foregroundStyle(.tertiary)
+                    }
+                }
+                ScrollView {
+                    LazyVStack(spacing: 3) {
+                        if model.viewMode == .items {
+                            ForEach(model.entries) { entry in
                                 entryRow(entry)
+                            }
+                        } else {
+                            if model.largeFiles.isEmpty {
+                                Text("未发现大于 \(Fmt.bytes(Double(model.largeFileThreshold))) 的单个文件")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.vertical, 18)
+                            } else {
+                                ForEach(model.largeFiles) { entry in
+                                    entryRow(entry)
+                                }
                             }
                         }
                     }
+                    .padding(.bottom, 6)
                 }
-                .padding(.bottom, 6)
+                .frame(maxHeight: .infinity)
             }
-            .frame(maxHeight: .infinity)
         }
+    }
+
+    private var duplicatesList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if model.isScanningDuplicates {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(model.duplicateProgress).font(.system(size: 10.5)).foregroundStyle(.secondary)
+                }
+            } else if model.duplicateGroups.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(model.hasScanned ? "未发现重复文件" : "先扫描目录")
+                        .font(.system(size: 11.5, weight: .medium))
+                    Button("开始查重") { model.scanDuplicates() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+                .padding(.vertical, 16)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(model.duplicateGroups) { group in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 10) {
+                                    Text(Fmt.bytes(Double(group.size)))
+                                        .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                                    Text("\(group.files.count) 个副本")
+                                        .font(.system(size: 10.5)).foregroundStyle(.secondary)
+                                    Text("可释放 \(Fmt.bytes(Double(group.wastedBytes)))")
+                                        .font(.system(size: 10.5)).foregroundStyle(.orange)
+                                    Spacer()
+                                    Button(model.expandedDuplicates.contains(group.id) ? "收起路径" : "查看路径") {
+                                        if model.expandedDuplicates.contains(group.id) {
+                                            model.expandedDuplicates.remove(group.id)
+                                        } else {
+                                            model.expandedDuplicates.insert(group.id)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .font(.system(size: 10))
+                                    Button("保留一份，其余移入回收站") { model.trashDuplicates(group) }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                }
+                                if model.expandedDuplicates.contains(group.id) {
+                                    ForEach(group.files, id: \.self) { path in
+                                        Text(path)
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor).opacity(0.7)))
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private func entryRow(_ entry: DiskEntry) -> some View {

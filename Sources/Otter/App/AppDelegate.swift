@@ -23,6 +23,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "duplicates-fixture":
+                let fm = FileManager.default
+                let root = "/tmp/otter-dup-fixture"
+                try? fm.removeItem(atPath: root)
+                try? fm.createDirectory(atPath: root, withIntermediateDirectories: true)
+                let a = Data(repeating: 1, count: 2 * 1024 * 1024)
+                let b = a
+                let cdata = Data(repeating: 2, count: 2 * 1024 * 1024)
+                fm.createFile(atPath: root + "/a.bin", contents: a)
+                fm.createFile(atPath: root + "/b.bin", contents: b)
+                fm.createFile(atPath: root + "/c.bin", contents: cdata)
+                var groups: [DuplicateGroup] = []
+                var done = false
+                DuplicateScanner.scan(root: URL(fileURLWithPath: root), progress: { _ in },
+                                      isCancelled: { false }) { result in
+                    groups = result
+                    done = true
+                }
+                let deadline = Date().addingTimeInterval(30)
+                while !done && Date() < deadline {
+                    RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+                }
+                let ok = groups.count == 1 && groups.first?.files.count == 2
+                print("{\"mode\":\"duplicates-fixture\",\"ok\":\(ok),\"groups\":\(groups.count),\"files\":\(groups.first?.files.count ?? 0)}")
+                exit(0)
             case "battery":
                 let b = BatteryService.read()
                 print("{\"mode\":\"battery\",\"ok\":true,\"present\":\(b.present),\"cycles\":\(b.cycleCount ?? -1),\"health\":\(b.healthPercent ?? -1),\"temp\":\(b.temperatureC ?? -1)}")
