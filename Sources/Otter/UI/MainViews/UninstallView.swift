@@ -12,6 +12,9 @@ final class UninstallViewModel: ObservableObject {
 
     @Published var query: String = ""
     @Published var sortAscending: Bool = true
+    @Published var sortBySize: Bool = false
+    @Published private(set) var appSizes: [String: Int64] = [:]
+    @Published private(set) var isComputingSizes = false
 
     @Published private(set) var selectedApp: AppItem?
     @Published private(set) var scan: UninstallScan?
@@ -69,6 +72,7 @@ final class UninstallViewModel: ObservableObject {
                 switch result {
                 case .success(let apps):
                     self.apps = apps
+                    self.computeAppSizes(apps)
                     self.runPendingAutoScan()
                 case .failure(let error):
                     self.appError = "加载应用列表失败：\(error.localizedDescription)"
@@ -94,6 +98,21 @@ final class UninstallViewModel: ObservableObject {
         if !apps.isEmpty { runPendingAutoScan() }
     }
 
+    private func computeAppSizes(_ apps: [AppItem]) {
+        appSizes = [:]
+        isComputingSizes = true
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let sizes = apps.map { app in
+                (app.id, SpaceScanner.allocatedSize(of: URL(fileURLWithPath: app.path)))
+            }
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.appSizes = Dictionary(uniqueKeysWithValues: sizes)
+                self.isComputingSizes = false
+            }
+        }
+    }
+
     private func runPendingAutoScan() {
         guard autoScanPending, !didAutoScan else { return }
         didAutoScan = true
@@ -107,6 +126,9 @@ final class UninstallViewModel: ObservableObject {
             $0.name.lowercased().contains(q) || $0.path.lowercased().contains(q)
         }
         list.sort { a, b in
+            if sortBySize {
+                return (appSizes[a.id] ?? 0) > (appSizes[b.id] ?? 0)
+            }
             let r = a.name.localizedStandardCompare(b.name)
             return sortAscending ? r == .orderedAscending : r == .orderedDescending
         }
@@ -343,12 +365,14 @@ struct UninstallView: View {
                     .font(.system(size: 10.5)).foregroundStyle(.secondary)
                 Spacer()
                 Menu {
-                    Button("名称 A → Z") { model.sortAscending = true }
-                    Button("名称 Z → A") { model.sortAscending = false }
+                    Button("名称 A → Z") { model.sortBySize = false; model.sortAscending = true }
+                    Button("名称 Z → A") { model.sortBySize = false; model.sortAscending = false }
+                    Button("按体积（大 → 小）") { model.sortBySize = true }
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.up.arrow.down").font(.system(size: 9))
-                        Text(model.sortAscending ? "A→Z" : "Z→A").font(.system(size: 10.5))
+                        Text(model.sortBySize ? "体积" : (model.sortAscending ? "A→Z" : "Z→A"))
+                            .font(.system(size: 10.5))
                     }
                 }
                 .menuStyle(.borderlessButton)
@@ -405,6 +429,11 @@ struct UninstallView: View {
                         .truncationMode(.middle)
                 }
                 Spacer(minLength: 0)
+                if let size = model.appSizes[app.id] {
+                    Text(Fmt.bytes(Double(size)))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 5)
             .padding(.horizontal, 8)

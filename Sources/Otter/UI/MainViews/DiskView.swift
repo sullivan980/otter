@@ -509,59 +509,73 @@ struct DiskView: View {
 
     private func entryRow(_ entry: DiskEntry) -> some View {
         let fraction = model.totalBytes > 0 ? Double(entry.bytes) / Double(model.totalBytes) : 0
-        return Button {
-            if entry.isDir { model.drill(entry) }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: entry.isDir ? "folder.fill" : "doc.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(entry.isDir ? Color.accentColor : Color.secondary)
-                    .frame(width: 18)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.name)
-                        .font(.system(size: 12, weight: entry.isDir ? .medium : .regular))
-                        .lineLimit(1)
-                    Text(entry.path)
-                        .font(.system(size: 9.5, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(Fmt.bytes(Double(entry.bytes)))
-                        .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
-                    Text(String(format: "%.1f%%", fraction * 100))
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.tertiary)
-                        .monospacedDigit()
-                }
-                .frame(width: 90, alignment: .trailing)
-                if entry.isDir {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.tertiary)
-                }
+        return HStack(spacing: 10) {
+            Image(systemName: entry.isDir ? "folder.fill" : "doc.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(entry.isDir ? Color.accentColor : Color.secondary)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.name)
+                    .font(.system(size: 12, weight: entry.isDir ? .medium : .regular))
+                    .lineLimit(1)
+                Text(entry.path)
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(entry.isDir ? 1 : 0.55))
-            )
-            .overlay(alignment: .bottomLeading) {
-                GeometryReader { geo in
-                    Rectangle()
-                        .fill(entry.isDir ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.25))
-                        .frame(width: max(1, geo.size.width * fraction), height: 2)
-                }
-                .frame(height: 2)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 1)
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(Fmt.bytes(Double(entry.bytes)))
+                    .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                Text(String(format: "%.1f%%", fraction * 100))
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.tertiary)
+                    .monospacedDigit()
+            }
+            .frame(width: 90, alignment: .trailing)
+
+            Button { revealInFinder(entry) } label: {
+                Image(systemName: "folder")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(4)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("在 Finder 中显示")
+
+            if entry.isDir {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
             }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .contentShape(Rectangle())
+        .onTapGesture { if entry.isDir { model.drill(entry) } }
+        .contextMenu {
+            Button("在 Finder 中显示") { revealInFinder(entry) }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(entry.isDir ? 1 : 0.55))
+        )
+        .overlay(alignment: .bottomLeading) {
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(entry.isDir ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.25))
+                    .frame(width: max(1, geo.size.width * fraction), height: 2)
+            }
+            .frame(height: 2)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 1)
+        }
+    }
+
+    private func revealInFinder(_ entry: DiskEntry) {
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: entry.path)])
     }
 }
 
