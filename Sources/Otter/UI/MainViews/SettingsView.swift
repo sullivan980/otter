@@ -159,6 +159,7 @@ struct SettingsView: View {
     @ObservedObject private var plugins = PluginStore.shared
     @ObservedObject private var menuBarStyles = MenuBarStyleStore.shared
     @ObservedObject private var whitelist = WhitelistStore.shared
+    @ObservedObject private var cleanRules = CleanRuleStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -170,6 +171,7 @@ struct SettingsView: View {
                     generalSection
                     menuBarSection
                     whitelistSection
+                    cleanRulesSection
                     PermissionSection(model: permissions)
                     PluginSection(store: plugins)
                     aboutSection
@@ -599,6 +601,53 @@ struct SettingsView: View {
             )
             Spacer()
             Text("实时刷新").font(.system(size: 9)).foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: 清理规则插件
+
+    private var cleanRulesSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "清理规则插件", trailing: "\(cleanRules.rules.count) 条")
+                Text("自定义清理分类：JSON 放 ~/Library/Application Support/Otter/cleanrules/，路径必须在主目录下；扫描后作为额外分类出现，白名单依然生效。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(cleanRules.rules) { rule in
+                    HStack(spacing: 8) {
+                        Image(systemName: "puzzlepiece.extension")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Text(rule.name).font(.system(size: 11))
+                        Spacer()
+                        Text(rule.roots.map { $0.path.replacingOccurrences(of: NSHomeDirectory(), with: "~") }.joined(separator: "、"))
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                if !cleanRules.loadErrors.isEmpty {
+                    ForEach(Array(cleanRules.loadErrors.enumerated()), id: \.offset) { _, line in
+                        Text("• \(line)").font(.system(size: 9.5)).foregroundStyle(.orange)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button("打开规则目录") {
+                        if let dir = try? cleanRules.ensureRulesDirectory() { NSWorkspace.shared.open(dir) }
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    Button("重新加载") {
+                        cleanRules.reload()
+                        ui.toast = "已重新加载清理规则"
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    Spacer()
+                }
+            }
         }
     }
 

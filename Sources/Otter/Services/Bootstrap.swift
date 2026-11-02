@@ -27,6 +27,57 @@ func runSelfTest(mode: String) {
     }
 }
 
+// MARK: - clean-rules-fixture（自定义清理规则）
+
+func runSelfTestCleanRules() {
+    let fm = FileManager.default
+    let root = "/tmp/otter-clean-rules"
+    let rulesDir = root + "/rules"
+    try? fm.removeItem(atPath: root)
+    try? fm.createDirectory(atPath: root + "/data/a", withIntermediateDirectories: true)
+    try? fm.createDirectory(atPath: root + "/data/b", withIntermediateDirectories: true)
+    try? fm.createDirectory(atPath: rulesDir, withIntermediateDirectories: true)
+    fm.createFile(atPath: root + "/data/a/x.bin", contents: Data(count: 600_000))
+    fm.createFile(atPath: root + "/data/b/y.bin", contents: Data(count: 600_000))
+    let json = """
+    {"id":"fixture","name":"自定义缓存","paths":["/tmp/otter-clean-rules/data"],"children":true}
+    """
+    try? json.write(toFile: rulesDir + "/fixture.json", atomically: true, encoding: .utf8)
+
+    CleanRuleStore.testDirectory = URL(fileURLWithPath: rulesDir)
+    CleanRuleStore.shared.reload()
+    NativeCleanService.testRulesOnly = true
+    defer {
+        NativeCleanService.testRulesOnly = false
+        CleanRuleStore.testDirectory = nil
+        CleanRuleStore.shared.reload()
+    }
+
+    let service = NativeCleanService()
+    service.callbackQueue = DispatchQueue(label: "com.ottermac.selftest.cleanrules", qos: .userInitiated)
+    let sem = DispatchSemaphore(value: 0)
+    var plan: CleanPlan?
+    service.preview(onLine: { _ in }, completion: { result in
+        if case .success(let p) = result { plan = p }
+        sem.signal()
+    })
+    guard sem.wait(timeout: .now() + 30) == .success, let plan = plan else {
+        emitSelfTestJSON(["mode": "clean-rules-fixture", "ok": false, "error": "预览失败"])
+        return
+    }
+    let keys = Set(plan.categories.flatMap { cat in cat.items.map { "\(cat.id)|\($0.id)" } })
+    var freed: Int64 = 0
+    service.run(selected: keys, onProgress: { _ in }, completion: { result in
+        if case .success(let r) = result { freed = r.freedBytes }
+        sem.signal()
+    })
+    _ = sem.wait(timeout: .now() + 30)
+    let gone = !fm.fileExists(atPath: root + "/data/a") && !fm.fileExists(atPath: root + "/data/b")
+    let ok = plan.categories.count == 1 && keys.count == 2 && gone && freed > 1_000_000
+    emitSelfTestJSON(["mode": "clean-rules-fixture", "ok": ok, "categories": plan.categories.count,
+                      "items": keys.count, "freedBytes": freed, "gone": gone])
+}
+
 // MARK: - uninstall-fixture（原生卸载扫描，仅 /tmp）
 
 func runSelfTestUninstallFixture() {

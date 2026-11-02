@@ -25,6 +25,7 @@ final class NativeCleanService: CleanServicing {
     private var running = false
 
     static var testRootOverride: String?
+    static var testRulesOnly = false
 
     private struct Spec {
         let id: String
@@ -38,9 +39,14 @@ final class NativeCleanService: CleanServicing {
         if let root = Self.testRootOverride {
             return [Spec(id: "test", title: "测试缓存", roots: [URL(fileURLWithPath: root)], children: true)]
         }
+        var pluginSpecs: [Spec] = CleanRuleStore.shared.rules.map { rule in
+            Spec(id: "plugin:\(rule.id)", title: rule.name, roots: rule.roots, children: rule.children)
+        }
+        if Self.testRulesOnly { return pluginSpecs }
+
         let home = NSHomeDirectory()
         func u(_ p: String) -> URL { URL(fileURLWithPath: p.replacingOccurrences(of: "~", with: home)) }
-        return [
+        let builtins = [
             Spec(id: "user_caches", title: "用户缓存", roots: [u("~/Library/Caches")], children: true),
             Spec(id: "user_logs", title: "用户日志", roots: [u("~/Library/Logs")], children: true),
             Spec(id: "trash", title: "废纸篓", roots: [u("~/.Trash")], children: true),
@@ -55,6 +61,7 @@ final class NativeCleanService: CleanServicing {
             Spec(id: "system_caches", title: "系统缓存（需授权）",
                  roots: [URL(fileURLWithPath: "/Library/Caches")], children: true, requiresRoot: true),
         ]
+        return builtins + pluginSpecs
     }
 
     // MARK: - 预览

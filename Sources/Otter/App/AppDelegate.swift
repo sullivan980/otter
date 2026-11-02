@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "clean-rules-fixture":
+                runSelfTestCleanRules()
+                exit(0)
             case "priv-guard":
                 let input = ["/Library/Caches/com.example.test",
                              "/Library/Caches/../etc/passwd",
