@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "space-fixture":
+                print(SpaceScanner.selfTestJSON())
             case "disk-fixture":
                 print(DiskViewModel.fixtureSelfTestJSON())
             case "disk-scan":

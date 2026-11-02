@@ -4,12 +4,13 @@ import SwiftUI
 // MARK: - 主界面分区
 
 enum MainSection: String, CaseIterable, Identifiable {
-    case clean, uninstall, disk, settings
+    case clean, uninstall, space, disk, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .clean: return "清理"
         case .uninstall: return "卸载"
+        case .space: return "空间"
         case .disk: return "磁盘"
         case .settings: return "设置"
         }
@@ -18,6 +19,7 @@ enum MainSection: String, CaseIterable, Identifiable {
         switch self {
         case .clean: return "sparkles"
         case .uninstall: return "xmark.bin"
+        case .space: return "shippingbox"
         case .disk: return "internaldrive"
         case .settings: return "gearshape"
         }

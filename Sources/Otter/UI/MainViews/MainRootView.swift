@@ -13,6 +13,7 @@ struct MainRootView: View {
     @StateObject private var clean = CleanViewModel()
     @StateObject private var uninstall = UninstallViewModel()
     @StateObject private var disk = DiskViewModel()
+    @StateObject private var space = SpaceViewModel()
 
     var body: some View {
         ZStack {
@@ -44,6 +45,8 @@ struct MainRootView: View {
             CleanView(model: clean)
         case .uninstall:
             UninstallView(model: uninstall)
+        case .space:
+            SpaceView(model: space)
         case .disk:
             DiskView(model: disk)
         case .settings:

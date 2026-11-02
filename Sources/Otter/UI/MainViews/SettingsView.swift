@@ -158,6 +158,7 @@ struct SettingsView: View {
     @StateObject private var ui = SettingsUIState()
     @ObservedObject private var plugins = PluginStore.shared
     @ObservedObject private var menuBarStyles = MenuBarStyleStore.shared
+    @ObservedObject private var whitelist = WhitelistStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -168,6 +169,7 @@ struct SettingsView: View {
                     themeSection
                     generalSection
                     menuBarSection
+                    whitelistSection
                     PermissionSection(model: permissions)
                     PluginSection(store: plugins)
                     aboutSection
@@ -597,6 +599,68 @@ struct SettingsView: View {
             )
             Spacer()
             Text("实时刷新").font(.system(size: 9)).foregroundStyle(.tertiary)
+        }
+    }
+
+    // MARK: 清理保护（白名单）
+
+    private var whitelistSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "清理保护", trailing: "\(whitelist.paths.count) 条")
+                Text("这些路径不会被安装包 / 项目产物清理删除；适合放正在开发的项目或重要目录。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if whitelist.paths.isEmpty {
+                    Text("暂无保护路径").font(.system(size: 10.5)).foregroundStyle(.tertiary)
+                } else {
+                    ForEach(whitelist.paths, id: \.self) { path in
+                        HStack(spacing: 8) {
+                            Image(systemName: "lock.shield")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                            Text(path)
+                                .font(.system(size: 10, design: .monospaced))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer()
+                            Button("移除") { whitelist.remove(path) }
+                                .buttonStyle(.borderless)
+                                .font(.system(size: 10))
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button("添加路径…") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = true
+                        panel.canChooseDirectories = true
+                        panel.allowsMultipleSelection = true
+                        panel.prompt = "保护"
+                        panel.message = "选择要保护的文件或目录"
+                        if panel.runModal() == .OK {
+                            for url in panel.urls { whitelist.add(url.path) }
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Button("打开配置文件") {
+                        try? FileManager.default.createDirectory(at: whitelist.fileURL.deletingLastPathComponent(),
+                                                                 withIntermediateDirectories: true)
+                        if !FileManager.default.fileExists(atPath: whitelist.fileURL.path) {
+                            try? Data("[]".utf8).write(to: whitelist.fileURL)
+                        }
+                        NSWorkspace.shared.open(whitelist.fileURL)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Spacer()
+                }
+            }
         }
     }
 
