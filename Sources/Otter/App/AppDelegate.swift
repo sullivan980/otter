@@ -9,6 +9,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         bootstrapServices()
+        if ProcessInfo.processInfo.environment["OTTER_DEMO_RESULT"] == "1" {
+            OperationResultCenter.shared.post(kind: .success, title: "清理完成",
+                                              message: "已释放 2.0 GB，共 72 项", autoDismiss: 0)
+        }
         PluginWatcher.shared.start()
 
         // 验收/自测入口：OTTER_SELFTEST=metrics|clean|uninstall → 跑一次并退出

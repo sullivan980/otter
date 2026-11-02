@@ -254,6 +254,8 @@ final class UninstallViewModel: ObservableObject {
                     self.scan = nil
                     self.selectedIds = []
                     self.expandedKinds = []
+                    OperationResultCenter.shared.post(kind: .success, title: "卸载完成",
+                                                      message: "\(scan.app.name)：已将 \(moved) 项移入废纸篓，可从废纸篓还原")
                     if Prefs.shared.notificationsEnabled {
                         Notifications.shared.postUninstallFinished(app: scan.app.name, bytes: bytes)
                     }
@@ -264,6 +266,8 @@ final class UninstallViewModel: ObservableObject {
                     if Prefs.shared.notificationsEnabled {
                         Notifications.shared.postUninstallFailed(app: scan.app.name,
                                                                  reason: "卸载失败：\(error.localizedDescription)")
+                        OperationResultCenter.shared.post(kind: .error, title: "卸载失败",
+                                                          message: "(scan.app.name)：(error.localizedDescription)")
                     }
                 }
             }

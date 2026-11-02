@@ -7,6 +7,7 @@ import AppKit
 struct MainRootView: View {
     @ObservedObject var state: AppState
     @ObservedObject private var themeStore = ThemeStore.shared
+    @ObservedObject private var results = OperationResultCenter.shared
 
     private var theme: AppTheme { themeStore.theme }
 
@@ -32,6 +33,15 @@ struct MainRootView: View {
                 .strokeBorder(Color.white.opacity(theme.isDark ? 0.10 : 0.35), lineWidth: 1)
                 .allowsHitTesting(false)
         )
+        .overlay(alignment: .topTrailing) {
+            if let result = results.current {
+                OperationResultCard(result: result)
+                    .padding(.top, 48)
+                    .padding(.trailing, 18)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: results.current?.id)
         .background(WindowAppearance(isDark: theme.isDark).frame(width: 0, height: 0))
         .tint(theme.accent)
         .preferredColorScheme(theme.isDark ? .dark : .light)

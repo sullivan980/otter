@@ -248,6 +248,13 @@ final class CleanViewModel: ObservableObject {
                         Prefs.shared.lastCleanAt = Date().timeIntervalSince1970
                         Prefs.shared.lastCleanBytes = cleanResult.freedBytes
                     }
+                    if cleanResult.success {
+                        OperationResultCenter.shared.post(kind: .success, title: "清理完成",
+                                                          message: "已释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))，共 \(self.selectedCount()) 项")
+                    } else {
+                        OperationResultCenter.shared.post(kind: .warning, title: "清理结束",
+                                                          message: "部分项目未能删除，可在日志中查看原因")
+                    }
                     if cleanResult.success, Prefs.shared.notificationsEnabled {
                         Notifications.shared.postCleanFinished(freedBytes: cleanResult.freedBytes)
                     }
@@ -263,6 +270,8 @@ final class CleanViewModel: ObservableObject {
                     self.errorText = "清理失败：\(error.localizedDescription)"
                     if Prefs.shared.notificationsEnabled {
                         Notifications.shared.postCleanFailed("清理失败：\(error.localizedDescription)")
+                        OperationResultCenter.shared.post(kind: .error, title: "清理失败",
+                                                          message: error.localizedDescription)
                     }
                 }
             }

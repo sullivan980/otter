@@ -15,8 +15,14 @@ final class MaintenanceViewModel: ObservableObject {
             guard let self = self else { return }
             self.dnsRunning = false
             switch result {
-            case .success: self.dnsMessage = "DNS 缓存已刷新"
-            case .failure(let error): self.dnsMessage = "刷新失败：\(error.localizedDescription)"
+            case .success:
+                self.dnsMessage = "DNS 缓存已刷新"
+                OperationResultCenter.shared.post(kind: .success, title: "DNS 已刷新",
+                                                  message: "dscacheutil 已执行，mDNSResponder 已重新加载")
+            case .failure(let error):
+                self.dnsMessage = "刷新失败：\(error.localizedDescription)"
+                OperationResultCenter.shared.post(kind: .error, title: "DNS 刷新失败",
+                                                  message: error.localizedDescription)
             }
         }
     }

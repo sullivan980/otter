@@ -80,9 +80,13 @@ final class SpaceViewModel: ObservableObject {
         let result = SpaceScanner.delete(paths: paths)
         if result.errors.isEmpty {
             resultText = "已删除 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))"
+            OperationResultCenter.shared.post(kind: .success, title: "空间清理完成",
+                                              message: "已删除 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))")
         } else {
             resultText = "已删除 \(result.removed) 项，\(result.errors.count) 项失败"
             errorText = result.errors.joined(separator: "\n")
+            OperationResultCenter.shared.post(kind: .warning, title: "部分项目未删除",
+                                              message: "成功 \(result.removed) 项，失败 \(result.errors.count) 项")
         }
         scan()
     }
