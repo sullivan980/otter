@@ -4,6 +4,22 @@ final class MaintenanceViewModel: ObservableObject {
     @Published private(set) var report = MaintenanceReport()
     @Published private(set) var isRefreshing = false
     @Published var errorText: String?
+    @Published var dnsRunning = false
+    @Published var dnsMessage: String?
+    @Published var confirmDNS = false
+
+    func flushDNS() {
+        dnsRunning = true
+        dnsMessage = nil
+        MaintenanceService.flushDNS { [weak self] result in
+            guard let self = self else { return }
+            self.dnsRunning = false
+            switch result {
+            case .success: self.dnsMessage = "DNS 缓存已刷新"
+            case .failure(let error): self.dnsMessage = "刷新失败：\(error.localizedDescription)"
+            }
+        }
+    }
 
     func refresh() {
         isRefreshing = true
@@ -61,6 +77,12 @@ struct MaintenanceView: View {
             }
         }
         .onAppear { if model.report.osVersion.isEmpty { model.refresh() } }
+        .alert("刷新 DNS 缓存？", isPresented: $model.confirmDNS) {
+            Button("取消", role: .cancel) {}
+            Button("刷新", role: .destructive) { model.flushDNS() }
+        } message: {
+            Text("会请求一次管理员授权，并短暂影响域名解析；不会删除任何文件。")
+        }
     }
 
     private var diskCard: some View {
@@ -114,14 +136,40 @@ struct MaintenanceView: View {
                 }
                 .foregroundStyle(.secondary)
 
-                taskRow("刷新 DNS 缓存", "需要管理员授权；会短暂影响域名解析", "admin")
+                dnsTaskRow
                 taskRow("重建 Spotlight 索引", "高耗时、占 CPU；会影响搜索直到完成", "high")
                 taskRow("重建字体缓存", "需要重启；可能与正在运行的应用冲突", "high")
                 taskRow("运行系统定期维护脚本", "需要管理员授权；建议空闲时执行", "admin")
 
-                Text("这些动作风险较高，先只做诊断与说明；需要时再单独加受控执行。")
+                if let message = model.dnsMessage {
+                    Text(message)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(message.hasPrefix("刷新失败") ? Color.orange : Color.secondary)
+                }
+
+                Text("DNS 刷新为低风险受控动作；Spotlight / 字体缓存等仍只做说明。")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private var dnsTaskRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.shield")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("刷新 DNS 缓存").font(.system(size: 10.5, weight: .medium))
+                Text("需要管理员授权；会短暂影响域名解析").font(.system(size: 9)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if model.dnsRunning {
+                ProgressView().controlSize(.small)
+            } else {
+                Button("执行…") { model.confirmDNS = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
         }
     }

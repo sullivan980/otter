@@ -15,7 +15,11 @@
 - 重建字体缓存（需重启）
 - 运行系统定期维护脚本（需管理员）
 
-当前版本不执行这些动作，只展示影响说明，后续如需执行会单独加受控入口。
+## 受控执行
+- **刷新 DNS 缓存**：已支持，点击「执行…」→ 二次确认 → 一次管理员授权；
+  命令固定为 `dscacheutil -flushcache; killall -HUP mDNSResponder`，不拼接用户输入。
+- Spotlight 重建、字体缓存、定期脚本：仍只做说明，不执行。
 
 ## 自测
 OTTER_SELFTEST=maintenance：输出 OS/机型/Spotlight/快照/启动项/SMART/SSD/容量 JSON。
+OTTER_SELFTEST=maintenance-action：断言 DNS 刷新命令为固定白名单内容（不执行）。

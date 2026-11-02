@@ -19,6 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "maintenance-action":
+                let cmd = MaintenanceService.dnsFlushCommand
+                let ok = cmd.contains("dscacheutil -flushcache") && cmd.contains("killall -HUP mDNSResponder")
+                print("{\"mode\":\"maintenance-action\",\"ok\":\(ok),\"command\":\"\(cmd)\"}")
+                exit(0)
             case "maintenance":
                 let r = MaintenanceService.collect()
                 let dict: [String: Any] = [

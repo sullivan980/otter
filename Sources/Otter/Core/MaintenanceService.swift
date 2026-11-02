@@ -63,6 +63,36 @@ enum MaintenanceService {
         return r
     }
 
+    /// 低风险维护动作：刷新 DNS 缓存（一次管理员授权）。
+    static let dnsFlushCommand = "dscacheutil -flushcache; killall -HUP mDNSResponder"
+
+    static func flushDNS(completion: @escaping (Result<Void, Error>) -> Void) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", "do shell script \"\(dnsFlushCommand)\" with administrator privileges"]
+        let errPipe = Pipe()
+        process.standardError = errPipe
+        process.standardOutput = Pipe()
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            if process.terminationStatus == 0 {
+                DispatchQueue.main.async { completion(.success(())) }
+            } else {
+                let data = errPipe.fileHandleForReading.readDataToEndOfFile()
+                let msg = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let error = NSError(domain: "OtterMaintenance", code: Int(process.terminationStatus),
+                                    userInfo: [NSLocalizedDescriptionKey: msg.isEmpty ? "管理员授权被取消或执行失败" : msg])
+                DispatchQueue.main.async { completion(.failure(error)) }
+            }
+        }
+    }
+
     static func sysctl(_ name: String) -> String? {
         run("/usr/sbin/sysctl", ["-n", name])?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
