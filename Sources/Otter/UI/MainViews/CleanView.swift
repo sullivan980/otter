@@ -208,7 +208,10 @@ final class CleanViewModel: ObservableObject {
     var confirmMessage: String {
         guard plan != nil else { return "" }
         let n = displayItemCount
-        return "将清理预览中的全部 \(n) 项（勾选仅用于预览统计，v1 引擎按完整计划执行），预计释放 \(Fmt.bytes(Double(displayBytes)))。\n\n此操作不可撤销，确定继续？"
+        if Prefs.shared.cleanEngine == "native" {
+            return "将直接删除所勾选的 \(selectedCount()) 项，预计释放 \(Fmt.bytes(Double(selectedBytes())))。\n\n此操作不可撤销，确定继续？"
+        }
+        return "将清理预览中的全部 \(n) 项（mole 引擎按完整计划执行），预计释放 \(Fmt.bytes(Double(displayBytes)))。\n\n此操作不可撤销，确定继续？"
     }
 
     func run() {
@@ -220,7 +223,7 @@ final class CleanViewModel: ObservableObject {
         showConsole = true
         statusLine = "正在清理…（\(plan.categories.count) 类）"
 
-        service.run(onProgress: { [weak self] progress in
+        service.run(selected: selected, onProgress: { [weak self] progress in
             DispatchQueue.main.async {
                 guard let self = self, self.phase == .running else { return }
                 self.statusLine = progress.phase
@@ -592,11 +595,13 @@ struct CleanView: View {
     private var bottomBar: some View {
         if model.phase == .previewed, let plan = model.plan, !plan.categories.isEmpty {
             BottomBar {
-                Text("已选 \(model.selectedCount()) 项 · 完整计划预计释放 \(Fmt.bytes(Double(model.displayBytes)))")
+                Text(Prefs.shared.cleanEngine == "native"
+                     ? "已选 \(model.selectedCount()) 项 · 预计释放 \(Fmt.bytes(Double(model.selectedBytes())))"
+                     : "已选 \(model.selectedCount()) 项 · 完整计划预计释放 \(Fmt.bytes(Double(model.displayBytes)))")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("v1 引擎按完整计划执行")
+                Text(Prefs.shared.cleanEngine == "native" ? "原生引擎 · 按勾选执行" : "mole 引擎按完整计划执行")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                 Button("清理…") { ui.confirmRun = true }

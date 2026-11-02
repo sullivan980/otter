@@ -64,7 +64,15 @@ struct UninstallScan {
 protocol CleanServicing: AnyObject {
     func preview(onLine: @escaping (String) -> Void, completion: @escaping (Result<CleanPlan, Error>) -> Void)
     func run(onProgress: @escaping (CleanProgress) -> Void, completion: @escaping (Result<CleanResult, Error>) -> Void)
+    /// 按勾选项执行（key 格式 "分类id|条目id"）；默认实现忽略勾选，跑完整计划。
+    func run(selected: Set<String>, onProgress: @escaping (CleanProgress) -> Void, completion: @escaping (Result<CleanResult, Error>) -> Void)
     func cancel()
+}
+
+extension CleanServicing {
+    func run(selected: Set<String>, onProgress: @escaping (CleanProgress) -> Void, completion: @escaping (Result<CleanResult, Error>) -> Void) {
+        run(onProgress: onProgress, completion: completion)
+    }
 }
 
 protocol UninstallServicing: AnyObject {

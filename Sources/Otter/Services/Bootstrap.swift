@@ -3,7 +3,7 @@ import Foundation
 // 数据层实现的注入点（dev-data 负责：把真实服务装进 Services.shared）。
 // UI 在服务未就绪时显示「服务未就绪」。
 func bootstrapServices() {
-    Services.shared.clean = CleanService()
+    Services.shared.clean = Prefs.shared.cleanEngine == "native" ? NativeCleanService() : CleanService()
     Services.shared.uninstall = UninstallService()
 }
 
@@ -28,6 +28,59 @@ func runSelfTest(mode: String) {
     default:
         runSelfTestMetrics()
     }
+}
+
+// MARK: - clean-native-fixture（原生清理：预览→勾选→删除，仅 /tmp fixture）
+
+func runSelfTestNativeClean() {
+    let fm = FileManager.default
+    let root = "/tmp/otter-clean-fixture"
+    try? fm.removeItem(atPath: root)
+    try? fm.createDirectory(atPath: root + "/a", withIntermediateDirectories: true)
+    try? fm.createDirectory(atPath: root + "/b", withIntermediateDirectories: true)
+    fm.createFile(atPath: root + "/a/x.bin", contents: Data(count: 1_000_000))
+    fm.createFile(atPath: root + "/b/y.bin", contents: Data(count: 1_000_000))
+
+    NativeCleanService.testRootOverride = root
+    defer { NativeCleanService.testRootOverride = nil }
+
+    let service = NativeCleanService()
+    service.callbackQueue = DispatchQueue(label: "com.ottermac.selftest.nativeclean", qos: .userInitiated)
+    let sem = DispatchSemaphore(value: 0)
+    var plan: CleanPlan?
+    var previewError: Error?
+    service.preview(onLine: { _ in }, completion: { result in
+        switch result {
+        case .success(let p): plan = p
+        case .failure(let e): previewError = e
+        }
+        sem.signal()
+    })
+    guard sem.wait(timeout: .now() + 30) == .success, let plan = plan else {
+        emitSelfTestJSON(["mode": "clean-native-fixture", "ok": false,
+                          "error": previewError?.localizedDescription ?? "预览超时"])
+        return
+    }
+    let keys = Set(plan.categories.flatMap { cat in cat.items.map { "\(cat.id)|\($0.id)" } })
+    var result: CleanResult?
+    sem.signal()
+    _ = sem.wait(timeout: .now())
+    service.run(selected: keys, onProgress: { _ in }, completion: { r in
+        if case .success(let value) = r { result = value }
+        sem.signal()
+    })
+    let finished = sem.wait(timeout: .now() + 30) == .success
+    let gone = !fm.fileExists(atPath: root + "/a") && !fm.fileExists(atPath: root + "/b")
+    let ok = finished && (result?.freedBytes ?? 0) >= 2_000_000 && gone
+    emitSelfTestJSON([
+        "mode": "clean-native-fixture",
+        "ok": ok,
+        "categories": plan.categories.count,
+        "items": keys.count,
+        "freedBytes": result?.freedBytes ?? 0,
+        "deleted": result?.success ?? false,
+        "gone": gone
+    ])
 }
 
 // MARK: - metrics

@@ -12,6 +12,7 @@ final class Prefs {
         case singleMetric         // cpu | mem | disk（保留兼容）
         case menuBarShowIcon       // 菜单栏是否显示獭图标（默认不显示）
         case menuBarStyle          // 菜单栏样式插件 id（默认 value）
+        case cleanEngine           // native | mole（默认 native）
         case hudStyle             // 插件 id（0.4 起默认 n2）
         case launchAtLogin
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
@@ -44,6 +45,11 @@ final class Prefs {
     var menuBarStyle: String {
         get { d.string(forKey: Key.menuBarStyle.rawValue) ?? "value" }
         set { d.set(newValue, forKey: Key.menuBarStyle.rawValue) }
+    }
+
+    var cleanEngine: String {
+        get { d.string(forKey: Key.cleanEngine.rawValue) ?? "native" }
+        set { d.set(newValue, forKey: Key.cleanEngine.rawValue) }
     }
 
     var hudStyle: String {
