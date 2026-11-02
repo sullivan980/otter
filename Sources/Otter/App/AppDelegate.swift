@@ -23,6 +23,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "startup-fixture":
+                let fm = FileManager.default
+                let root = "/tmp/otter-startup-fixture"
+                try? fm.removeItem(atPath: root)
+                let userDir = root + "/user"
+                let sysDir = root + "/system"
+                try? fm.createDirectory(atPath: userDir, withIntermediateDirectories: true)
+                try? fm.createDirectory(atPath: sysDir, withIntermediateDirectories: true)
+                func writePlist(_ dir: String, _ name: String, _ label: String, disabled: Bool) {
+                    let obj: [String: Any] = ["Label": label, "Program": "/bin/echo", "RunAtLoad": true, "Disabled": disabled]
+                    if let data = try? PropertyListSerialization.data(fromPropertyList: obj, format: .xml, options: 0) {
+                        fm.createFile(atPath: dir + "/" + name, contents: data)
+                    }
+                }
+                writePlist(userDir, "a.plist", "com.test.a", disabled: false)
+                writePlist(userDir, "b.plist", "com.test.b", disabled: true)
+                writePlist(sysDir, "c.plist", "com.test.c", disabled: false)
+                LaunchItemService.testDirectories = [.userAgent: URL(fileURLWithPath: userDir),
+                                                     .systemDaemon: URL(fileURLWithPath: sysDir)]
+                defer { LaunchItemService.testDirectories = nil }
+                let items = LaunchItemService.scan()
+                let userItem = items.first { $0.label == "com.test.a" }
+                var toggled = false
+                if let item = userItem {
+                    if case .success = LaunchItemService.setDisabled(item, disabled: true) {
+                        let after = LaunchItemService.scan().first { $0.label == "com.test.a" }
+                        toggled = after?.disabled == true
+                    }
+                }
+                var systemRejected = false
+                if let sys = items.first(where: { $0.scope == .systemDaemon }) {
+                    if case .failure = LaunchItemService.setDisabled(sys, disabled: true) { systemRejected = true }
+                }
+                let ok = items.count == 3 && toggled && systemRejected
+                print("{\"mode\":\"startup-fixture\",\"ok\":\(ok),\"items\":\(items.count),\"toggled\":\(toggled),\"systemRejected\":\(systemRejected)}")
+                exit(0)
             case "duplicates-fixture":
                 let fm = FileManager.default
                 let root = "/tmp/otter-dup-fixture"
