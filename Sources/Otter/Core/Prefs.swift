@@ -17,6 +17,7 @@ final class Prefs {
         case menuBarOrder       // CSV: cpu,mem,disk,up,down
         case notificationsEnabled
         case appTheme           // A | B | C | D | E（默认 E 水波玻璃）
+        case updateFeedURL      // 更新源（https，GitHub API 或自定义 JSON）
         case lastCleanAt        // 上次清理时间（Unix 秒）
         case lastCleanBytes     // 上次清理释放字节数
     }
@@ -58,6 +59,11 @@ final class Prefs {
     var appTheme: String {
         get { d.string(forKey: Key.appTheme.rawValue) ?? "E" }
         set { d.set(newValue, forKey: Key.appTheme.rawValue) }
+    }
+
+    var updateFeedURL: String {
+        get { d.string(forKey: Key.updateFeedURL.rawValue) ?? "" }
+        set { d.set(newValue, forKey: Key.updateFeedURL.rawValue) }
     }
 
     /// 上次成功清理的时间与释放量（用于清理页展示）。

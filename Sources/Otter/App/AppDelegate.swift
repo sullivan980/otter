@@ -23,6 +23,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "update-check":
+                let gh = """
+                {"tag_name":"v9.9.9","html_url":"https://example.com/release","body":"notes","assets":[{"name":"Otter.dmg","browser_download_url":"https://example.com/Otter.dmg"}]}
+                """.data(using: .utf8)!
+                let custom = """
+                {"version":"1.2.3","dmg":"https://example.com/a.dmg","page":"https://example.com"}
+                """.data(using: .utf8)!
+                let a = (try? UpdateService.parse(gh))?.version == "9.9.9"
+                let b = (try? UpdateService.parse(custom))?.version == "1.2.3"
+                let c = UpdateService.compare("0.14.0", "0.13.0") == 1
+                let d = UpdateService.compare("0.13", "0.13.0") == 0
+                let e = UpdateService.compare("0.9", "0.10.0") == -1
+                print("{\"mode\":\"update-check\",\"ok\":\(a && b && c && d && e),\"current\":\"\(UpdateService.currentVersion)\"}")
+                exit(0)
             case "maintenance-action":
                 let cmd = MaintenanceService.dnsFlushCommand
                 let ok = cmd.contains("dscacheutil -flushcache") && cmd.contains("killall -HUP mDNSResponder")

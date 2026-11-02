@@ -146,6 +146,11 @@ final class SettingsUIState: ObservableObject {
     @Published var notificationsEnabled: Bool = Prefs.shared.notificationsEnabled
     @Published var notificationStatus: UNAuthorizationStatus = .notDetermined
     @Published var toast: String?
+    @Published var updateFeed: String = Prefs.shared.updateFeedURL
+    @Published var updateStatus: String?
+    @Published var updateInfo: UpdateInfo?
+    @Published var checkingUpdate = false
+    @Published var downloadingUpdate = false
 }
 
 struct SettingsView: View {
@@ -172,6 +177,7 @@ struct SettingsView: View {
                     menuBarSection
                     whitelistSection
                     cleanRulesSection
+                    updateSection
                     PermissionSection(model: permissions)
                     PluginSection(store: plugins)
                     aboutSection
@@ -647,6 +653,100 @@ struct SettingsView: View {
                     .buttonStyle(.bordered).controlSize(.small)
                     Spacer()
                 }
+            }
+        }
+    }
+
+    // MARK: 更新
+
+    private var updateSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "更新", trailing: "当前 v\(appVersion)")
+                Text("填 GitHub Releases API 或自定义 JSON 地址（https）。只检查与下载 DMG，不自动安装。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    TextField("https://api.github.com/repos/OWNER/REPO/releases/latest",
+                              text: Binding(
+                                get: { ui.updateFeed },
+                                set: { ui.updateFeed = $0; Prefs.shared.updateFeedURL = $0 }
+                              ))
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 10.5, design: .monospaced))
+                    Button(ui.checkingUpdate ? "检查中…" : "检查更新") { checkUpdate() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(ui.checkingUpdate || ui.updateFeed.isEmpty)
+                }
+
+                if let status = ui.updateStatus {
+                    Text(status)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(status.hasPrefix("发现") ? Color.accentColor : Color.secondary)
+                }
+
+                if let info = ui.updateInfo {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("发现新版本 v\(info.version)")
+                            .font(.system(size: 11.5, weight: .medium))
+                        if !info.notes.isEmpty {
+                            Text(info.notes)
+                                .font(.system(size: 9.5))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                        }
+                        HStack(spacing: 8) {
+                            if info.dmgURL != nil {
+                                Button(ui.downloadingUpdate ? "下载中…" : "下载 DMG") { downloadUpdate(info) }
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
+                                    .disabled(ui.downloadingUpdate)
+                            }
+                            if let page = info.pageURL {
+                                Button("打开发布页") { NSWorkspace.shared.open(page) }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func checkUpdate() {
+        ui.checkingUpdate = true
+        ui.updateStatus = nil
+        ui.updateInfo = nil
+        UpdateService.check(feedURLString: ui.updateFeed) { result in
+            ui.checkingUpdate = false
+            switch result {
+            case .upToDate(let current):
+                ui.updateStatus = "已是最新版本（v\(current)）"
+            case .available(let info):
+                ui.updateInfo = info
+                ui.updateStatus = "发现新版本 v\(info.version)"
+            case .failure(let message):
+                ui.updateStatus = message
+            }
+        }
+    }
+
+    private func downloadUpdate(_ info: UpdateInfo) {
+        guard let url = info.dmgURL else { return }
+        ui.downloadingUpdate = true
+        ui.updateStatus = "正在下载…"
+        UpdateService.download(url) { result in
+            ui.downloadingUpdate = false
+            switch result {
+            case .success(let file):
+                ui.updateStatus = "已下载到 \(file.path)，打开后拖入 Applications 覆盖安装。"
+                NSWorkspace.shared.open(file)
+            case .failure(let error):
+                ui.updateStatus = "下载失败：\(error.localizedDescription)"
             }
         }
     }
