@@ -16,6 +16,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch mode {
             case "menubar":
                 print(MenuBarFormat.selfTestJSON())
+            case "disk-fixture":
+                print(DiskViewModel.fixtureSelfTestJSON())
+            case "disk-scan":
+                let path = ProcessInfo.processInfo.environment["OTTER_DISK_PATH"] ?? NSHomeDirectory()
+                print(DiskViewModel.selfTestJSON(path: path))
             case "menubar-render":
                 var sm = SystemMetrics.zero
                 sm.isReady = true

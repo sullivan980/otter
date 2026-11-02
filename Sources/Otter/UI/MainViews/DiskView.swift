@@ -184,7 +184,7 @@ final class DiskViewModel: ObservableObject {
         var bytes: Int64 = 0
     }
 
-    private struct WalkResult {
+    struct WalkResult {
         var entries: [DiskEntry] = []
         var largeFiles: [DiskEntry] = []
         var totalBytes: Int64 = 0
@@ -193,13 +193,15 @@ final class DiskViewModel: ObservableObject {
         var error: String?
     }
 
-    private static func walk(url: URL,
+    static func walk(url: URL,
                              limit: Int,
                              isCancelled: () -> Bool,
                              onProgress: @escaping (Int, Int64) -> Void) -> WalkResult {
         var result = WalkResult()
         let fm = FileManager.default
-        let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey]
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey,
+                                      .fileSizeKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey,
+                                      .fileResourceIdentifierKey, .linkCountKey]
         var firstError: String?
 
         guard let enumerator = fm.enumerator(at: url,
@@ -217,6 +219,7 @@ final class DiskViewModel: ObservableObject {
 
         var aggregates: [String: Agg] = [:]
         var large: [DiskEntry] = []
+        var seenInodes = Set<String>()
         let rootPath = url.path
         let prefixCount = rootPath.hasSuffix("/") ? rootPath.count : rootPath.count + 1
         var totalBytes: Int64 = 0
@@ -240,11 +243,24 @@ final class DiskViewModel: ObservableObject {
                   !firstComponent.isEmpty else { continue }
 
             let values = try? item.resourceValues(forKeys: Set(keys))
-            if values?.isSymbolicLink == true { continue }
+            if values?.isSymbolicLink == true {
+                enumerator.skipDescendants()
+                continue
+            }
             let isDir = values?.isDirectory ?? false
             var size: Int64 = 0
             if !isDir {
-                size = Int64(values?.fileSize ?? 0)
+                // 只统计实际占用：iCloud 未下载/稀疏文件逻辑大小可能远超磁盘，
+                // 用 allocated size 才能和「磁盘已用」对得上。
+                size = Int64(values?.totalFileAllocatedSize ?? values?.fileAllocatedSize ?? 0)
+
+                // 硬链接只算一次（同一个 inode 可能出现在多个路径）。
+                if let linkCount = values?.linkCount, linkCount > 1,
+                   let inode = values?.fileResourceIdentifier {
+                    let key = String(describing: inode)
+                    if seenInodes.contains(key) { continue }
+                    seenInodes.insert(key)
+                }
                 totalBytes += size
                 fileCount += 1
             }
@@ -546,5 +562,37 @@ struct DiskView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+extension DiskViewModel {
+    /// 自测：fixture 覆盖稀疏文件/硬链接/符号链接，断言只按实际占用统计。
+    static func fixtureSelfTestJSON() -> String {
+        let fm = FileManager.default
+        let root = "/tmp/otter-disk-fixture"
+        try? fm.removeItem(atPath: root)
+        try? fm.createDirectory(atPath: root, withIntermediateDirectories: true)
+        fm.createFile(atPath: root + "/real.bin", contents: Data(count: 1_000_000))
+        try? fm.linkItem(atPath: root + "/real.bin", toPath: root + "/hardlink.bin")
+        // 2GB 稀疏文件：逻辑 2GB，实际约 0
+        fm.createFile(atPath: root + "/sparse.bin", contents: Data())
+        let fh = FileHandle(forWritingAtPath: root + "/sparse.bin")
+        fh?.truncateFile(atOffset: 2_000_000_000)
+        fh?.closeFile()
+        // 指向 /System 的符号链接，不应被跟随
+        try? fm.createSymbolicLink(atPath: root + "/syslink", withDestinationPath: "/System")
+        let result = walk(url: URL(fileURLWithPath: root), limit: 1_000_000, isCancelled: { false }, onProgress: { _, _ in })
+        let real = (try? fm.attributesOfItem(atPath: root + "/real.bin")[.size] as? Int64) ?? 0
+        return "{\"mode\":\"disk-fixture\",\"bytes\":\(result.totalBytes),\"files\":\(result.totalFiles),\"logicalRealFile\":\(real),\"ok\":\(result.totalBytes < 1_500_000 && result.totalFiles == 2)}"
+    }
+
+    /// 自测：扫描指定目录并输出总量 + 前 10 项，用于和 du 对照。
+    static func selfTestJSON(path: String) -> String {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        let result = walk(url: url, limit: 1_000_000, isCancelled: { false }, onProgress: { _, _ in })
+        let top = result.entries.prefix(10).map { e in
+            "\(e.name):\(e.bytes)"
+        }.joined(separator: ",")
+        return "{\"mode\":\"disk-scan\",\"path\":\"\(url.path)\",\"bytes\":\(result.totalBytes),\"files\":\(result.totalFiles),\"truncated\":\(result.truncated),\"top\":[\(top)]}"
     }
 }
