@@ -98,6 +98,7 @@ final class StatusBarController: NSObject {
 
         menu.addItem(.separator())
         addItem(menu, "欢迎引导…", #selector(openOnboarding), "")
+        addItem(menu, "检查更新…", #selector(checkUpdates), "")
         addItem(menu, "关于 Otter", #selector(openAbout), "")
         menu.addItem(.separator())
 
@@ -122,6 +123,42 @@ final class StatusBarController: NSObject {
         refresh(force: true)
     }
     @objc private func openOnboarding() { OnboardingController.shared.show(force: true) }
+    @objc private func checkUpdates() {
+        let feed = Prefs.shared.updateFeedURL
+        guard !feed.isEmpty else {
+            let alert = NSAlert()
+            alert.messageText = "尚未配置更新源"
+            alert.informativeText = "请在「设置 → 更新」里填入 GitHub Releases API 或自定义 JSON 地址。"
+            alert.addButton(withTitle: "去设置")
+            alert.addButton(withTitle: "取消")
+            if alert.runModal() == .alertFirstButtonReturn { openSettings() }
+            return
+        }
+        UpdateService.check(feedURLString: feed) { result in
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                switch result {
+                case .upToDate(let current):
+                    alert.messageText = "已是最新版本"
+                    alert.informativeText = "当前 v\(current)"
+                    alert.addButton(withTitle: "好")
+                    alert.runModal()
+                case .available(let info):
+                    alert.messageText = "发现新版本 v\(info.version)"
+                    alert.informativeText = info.notes.isEmpty ? "在设置 → 更新中下载 DMG。" : info.notes
+                    alert.addButton(withTitle: "打开设置")
+                    alert.addButton(withTitle: "稍后")
+                    if alert.runModal() == .alertFirstButtonReturn { self.openSettings() }
+                case .failure(let message):
+                    alert.messageText = "检查更新失败"
+                    alert.informativeText = message
+                    alert.addButton(withTitle: "好")
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
     @objc private func openAbout() {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let credits = NSAttributedString(

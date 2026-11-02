@@ -24,8 +24,12 @@ struct MenuBarStyle: Identifiable, Equatable {
                                   showTrend: false, separator: " · ", isBuiltin: true)
     static let trend = MenuBarStyle(id: "trend", name: "数值 + 趋势", showLabels: false, showIcons: false,
                                     showTrend: true, separator: " ", isBuiltin: true)
+    static let iconTrend = MenuBarStyle(id: "icon-trend", name: "图标 + 趋势", showLabels: false, showIcons: true,
+                                        showTrend: true, separator: " ", isBuiltin: true)
+    static let labelDot = MenuBarStyle(id: "label-dot", name: "名称 + 中点", showLabels: true, showIcons: false,
+                                       showTrend: false, separator: " · ", isBuiltin: true)
 
-    static let builtins: [MenuBarStyle] = [.value, .label, .icon, .dot, .trend]
+    static let builtins: [MenuBarStyle] = [.value, .label, .icon, .dot, .trend, .iconTrend, .labelDot]
     static let fallback: MenuBarStyle = .value
 }
 
