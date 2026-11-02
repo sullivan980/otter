@@ -19,6 +19,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "maintenance":
+                let r = MaintenanceService.collect()
+                let dict: [String: Any] = [
+                    "mode": "maintenance",
+                    "ok": !r.osVersion.isEmpty,
+                    "os": r.osVersion,
+                    "arch": r.arch,
+                    "model": r.model,
+                    "spotlight": r.spotlight,
+                    "snapshots": r.snapshotCount,
+                    "userAgents": r.userAgents,
+                    "systemAgents": r.systemAgents,
+                    "systemDaemons": r.systemDaemons,
+                    "smart": r.smartStatus ?? "",
+                    "ssd": r.isSSD.map { $0 ? "ssd" : "hdd" } ?? "unknown",
+                    "freeBytes": r.freeBytes,
+                    "totalBytes": r.totalBytes
+                ]
+                print(String(data: try! JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys]), encoding: .utf8)!)
+                exit(0)
             case "priv-guard":
                 let input = ["/Library/Caches/com.example.test",
                              "/Library/Caches/../etc/passwd",
