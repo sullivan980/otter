@@ -266,6 +266,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         state = AppState()
+        DesktopWidgetController.shared.configure(state: state, themeStore: ThemeStore.shared)
+        if Prefs.shared.desktopWidgetVisible || ProcessInfo.processInfo.environment["OTTER_SHOW_WIDGET"] == "1" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                DesktopWidgetController.shared.show()
+            }
+        }
         state.sampler = RealMetricsSampler()
         state.start()
 
