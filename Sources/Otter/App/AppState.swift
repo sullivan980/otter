@@ -42,11 +42,22 @@ final class AppState: ObservableObject {
         }
     }
 
+    private func checkAlerts(_ m: SystemMetrics) {
+        guard Prefs.shared.alertsEnabled else { return }
+        for event in AlertMonitor.shared.evaluate(m) {
+            Notifications.shared.post(title: event.title, body: event.body)
+            OtterLog.shared.add("告警：\(event.title) \(event.body)")
+        }
+    }
+
     func tick() {
         let s = sampler
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let m = s.sample()
-            DispatchQueue.main.async { self?.metrics = m }
+            DispatchQueue.main.async {
+                self?.metrics = m
+                self?.checkAlerts(m)
+            }
         }
     }
 }

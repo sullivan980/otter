@@ -35,6 +35,8 @@ struct CleanResult {
     let success: Bool
     let freedBytes: Int64
     let output: String
+    /// 移入 Otter 回收站的字节数（清空后才真正释放）。
+    var trashedBytes: Int64 = 0
 }
 
 // MARK: - 卸载

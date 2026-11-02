@@ -23,6 +23,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "safe-trash":
+                let fm = FileManager.default
+                let home = "/tmp/otter-safe-trash-home"
+                let trashRoot = "/tmp/otter-safe-trash-root"
+                try? fm.removeItem(atPath: home)
+                try? fm.removeItem(atPath: trashRoot)
+                try? fm.createDirectory(atPath: home, withIntermediateDirectories: true)
+                fm.createFile(atPath: home + "/a.bin", contents: Data(count: 100_000))
+                fm.createFile(atPath: home + "/b.bin", contents: Data(count: 100_000))
+                SafeTrashService.testRoot = URL(fileURLWithPath: trashRoot)
+                defer { SafeTrashService.testRoot = nil }
+                let moved = SafeTrashService.shared.move([home + "/a.bin", home + "/b.bin"])
+                let listed = SafeTrashService.shared.list()
+                let restored = SafeTrashService.shared.restore(all: true)
+                let back = fm.fileExists(atPath: home + "/a.bin") && fm.fileExists(atPath: home + "/b.bin")
+                let ok = moved.moved == 2 && listed.count == 1 && listed.first?.count == 2 && restored.restored == 2 && back
+                print("{\"mode\":\"safe-trash\",\"ok\":\(ok),\"moved\":\(moved.moved),\"restored\":\(restored.restored),\"back\":\(back)}")
+                exit(0)
+            case "process-kill":
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: "/bin/sleep")
+                p.arguments = ["30"]
+                do {
+                    try p.run()
+                    let pid = p.processIdentifier
+                    let result = ProcessService.terminate(pid: pid, force: false)
+                    Thread.sleep(forTimeInterval: 0.5)
+                    let gone = !p.isRunning
+                    p.terminate()
+                    var ok = false
+                    if case .success = result { ok = gone }
+                    print("{\"mode\":\"process-kill\",\"ok\":\(ok),\"pid\":\(pid)}")
+                } catch {
+                    print("{\"mode\":\"process-kill\",\"ok\":false,\"error\":\"\(error.localizedDescription)\"}")
+                }
+                exit(0)
+            case "alerts":
+                var m = SystemMetrics.zero
+                m.isReady = true
+                m.cpuPercent = 95; m.memUsedPercent = 50; m.diskUsedPercent = 50
+                let t0 = Date(timeIntervalSince1970: 1_000_000)
+                let a = AlertMonitor.shared.evaluate(m, now: t0)
+                let b = AlertMonitor.shared.evaluate(m, now: t0.addingTimeInterval(31))
+                let c = AlertMonitor.shared.evaluate(m, now: t0.addingTimeInterval(40))
+                m.cpuPercent = 10
+                _ = AlertMonitor.shared.evaluate(m, now: t0.addingTimeInterval(50))
+                m.cpuPercent = 95
+                let d = AlertMonitor.shared.evaluate(m, now: t0.addingTimeInterval(100))
+                let e = AlertMonitor.shared.evaluate(m, now: t0.addingTimeInterval(700))
+                let ok = a.isEmpty && b.count == 1 && c.isEmpty && d.isEmpty && e.count == 1
+                print("{\"mode\":\"alerts\",\"ok\":\(ok),\"first\":\(b.count),\"cooldown\":\(c.count)}")
+                exit(0)
             case "diagnostics":
                 let text = DiagnosticsService.text(metrics: nil, state: nil)
                 let ok = text.contains("Otter 诊断报告") && text.contains("版本:") && text.contains("## 最近日志")

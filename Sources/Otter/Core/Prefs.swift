@@ -18,6 +18,7 @@ final class Prefs {
         case notificationsEnabled
         case appTheme           // A | B | C | D | E（默认 E 水波玻璃）
         case updateFeedURL      // 更新源（https，GitHub API 或自定义 JSON）
+        case alertsEnabled, alertCPU, alertMem, alertDisk, alertDuration, alertCooldown
         case lastCleanAt        // 上次清理时间（Unix 秒）
         case lastCleanBytes     // 上次清理释放字节数
     }
@@ -60,6 +61,13 @@ final class Prefs {
         get { d.string(forKey: Key.appTheme.rawValue) ?? "E" }
         set { d.set(newValue, forKey: Key.appTheme.rawValue) }
     }
+
+    var alertsEnabled: Bool { get { bool(.alertsEnabled, default: false) } set { d.set(newValue, forKey: Key.alertsEnabled.rawValue) } }
+    var alertCPU: Double { get { d.object(forKey: Key.alertCPU.rawValue) == nil ? 90 : d.double(forKey: Key.alertCPU.rawValue) } set { d.set(newValue, forKey: Key.alertCPU.rawValue) } }
+    var alertMem: Double { get { d.object(forKey: Key.alertMem.rawValue) == nil ? 90 : d.double(forKey: Key.alertMem.rawValue) } set { d.set(newValue, forKey: Key.alertMem.rawValue) } }
+    var alertDisk: Double { get { d.object(forKey: Key.alertDisk.rawValue) == nil ? 90 : d.double(forKey: Key.alertDisk.rawValue) } set { d.set(newValue, forKey: Key.alertDisk.rawValue) } }
+    var alertDuration: Double { get { d.object(forKey: Key.alertDuration.rawValue) == nil ? 30 : d.double(forKey: Key.alertDuration.rawValue) } set { d.set(newValue, forKey: Key.alertDuration.rawValue) } }
+    var alertCooldown: Double { get { d.object(forKey: Key.alertCooldown.rawValue) == nil ? 600 : d.double(forKey: Key.alertCooldown.rawValue) } set { d.set(newValue, forKey: Key.alertCooldown.rawValue) } }
 
     var updateFeedURL: String {
         get { d.string(forKey: Key.updateFeedURL.rawValue) ?? "" }

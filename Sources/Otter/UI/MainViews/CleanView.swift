@@ -241,22 +241,36 @@ final class CleanViewModel: ObservableObject {
                     self.result = cleanResult
                     let tail = cleanResult.output.split(separator: "\n").suffix(60).map(String.init)
                     for line in tail { self.append(line) }
-                    self.statusLine = cleanResult.success
-                        ? "清理完成，释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))"
-                        : "清理结束（成功：\(cleanResult.success ? "是" : "否")）"
+                    let total = cleanResult.freedBytes + cleanResult.trashedBytes
+                    if cleanResult.success {
+                        if cleanResult.trashedBytes > 0 {
+                            self.statusLine = "已移入 Otter 回收站 \(Fmt.bytes(Double(cleanResult.trashedBytes)))，清空后释放"
+                        } else {
+                            self.statusLine = "清理完成，释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))"
+                        }
+                    } else {
+                        self.statusLine = "清理结束（部分失败）"
+                    }
                     if cleanResult.success {
                         Prefs.shared.lastCleanAt = Date().timeIntervalSince1970
-                        Prefs.shared.lastCleanBytes = cleanResult.freedBytes
+                        Prefs.shared.lastCleanBytes = total
                     }
                     if cleanResult.success {
-                        OperationResultCenter.shared.post(kind: .success, title: "清理完成",
-                                                          message: "已释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))，共 \(self.selectedCount()) 项")
+                        let message = cleanResult.trashedBytes > 0
+                            ? "已移入 Otter 回收站 \(Fmt.bytes(Double(cleanResult.trashedBytes)))，共 \(self.selectedCount()) 项"
+                            : "已释放 \(Fmt.bytes(Double(cleanResult.freedBytes)))，共 \(self.selectedCount()) 项"
+                        OperationResultCenter.shared.post(kind: .success, title: "清理完成", message: message)
                     } else {
                         OperationResultCenter.shared.post(kind: .warning, title: "清理结束",
-                                                          message: "部分项目未能删除，可在日志中查看原因")
+                                                          message: "部分项目未能处理，可在日志中查看原因")
                     }
                     if cleanResult.success, Prefs.shared.notificationsEnabled {
-                        Notifications.shared.postCleanFinished(freedBytes: cleanResult.freedBytes)
+                        if cleanResult.trashedBytes > 0 {
+                            Notifications.shared.post(title: "清理完成",
+                                                      body: "已移入 Otter 回收站 \(Fmt.bytes(Double(cleanResult.trashedBytes)))")
+                        } else {
+                            Notifications.shared.postCleanFinished(freedBytes: cleanResult.freedBytes)
+                        }
                     }
                 case .failure(let error):
                     if self.didCancelRequested {
@@ -416,7 +430,7 @@ struct CleanView: View {
         let fmt = DateFormatter()
         fmt.dateFormat = "M月d日 HH:mm"
         let when = fmt.string(from: Date(timeIntervalSince1970: at))
-        return "上次清理：\(when) · 释放 \(Fmt.bytes(Double(Prefs.shared.lastCleanBytes)))"
+        return "上次清理：\(when) · 处理 \(Fmt.bytes(Double(Prefs.shared.lastCleanBytes)))"
     }
 
     private var previewContent: some View {
@@ -582,7 +596,9 @@ struct CleanView: View {
             StatusBanner(kind: model.result?.success == true ? .success : .warning,
                          title: model.statusLine,
                          message: model.result?.success == true
-                            ? "已清理的项目不可恢复；菜单栏与 HUD 指标不受影响。"
+                            ? ((model.result?.trashedBytes ?? 0) > 0
+                                ? "已移入 Otter 回收站，可在「设置 → Otter 回收站」恢复；清空后释放磁盘。"
+                                : "已清理的项目不可恢复；菜单栏与 HUD 指标不受影响。")
                             : "任务结束，但引擎返回了非成功状态，请查看执行日志。")
             if let result = model.result, !result.output.isEmpty {
                 ConsoleView(lines: result.output.split(separator: "\n").suffix(80).map(String.init),

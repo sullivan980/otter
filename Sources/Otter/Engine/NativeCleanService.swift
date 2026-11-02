@@ -145,19 +145,13 @@ final class NativeCleanService: CleanServicing {
             let systemPaths = targets.filter { $0 == systemPrefix || $0.hasPrefix(systemPrefix + "/") }
             let normalPaths = targets.filter { !systemPaths.contains($0) }
 
-            for path in normalPaths {
-                if self.isCancelled() { break }
-                let url = URL(fileURLWithPath: path)
-                let bytes = SpaceScanner.allocatedSize(of: url)
-                do {
-                    try fm.removeItem(at: url)
-                    freed += bytes
-                    removed += 1
-                    lines.append("删除 \(path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))（\(Fmt.bytes(Double(bytes)))）")
-                } catch {
-                    errors.append("\(url.lastPathComponent)：\(error.localizedDescription)")
-                }
-                self.deliver { onProgress(CleanProgress(phase: "清理中 \(removed)/\(targets.count)", line: errors.last ?? lines.last ?? "")) }
+            var trashed: Int64 = 0
+            if !normalPaths.isEmpty && !self.isCancelled() {
+                let move = SafeTrashService.shared.move(normalPaths)
+                removed += move.moved
+                trashed += move.bytes
+                errors.append(contentsOf: move.errors)
+                lines.append("移入 Otter 回收站 \(move.moved) 项（\(Fmt.bytes(Double(move.bytes)))）")
             }
 
             if !systemPaths.isEmpty && !self.isCancelled() {
@@ -173,7 +167,7 @@ final class NativeCleanService: CleanServicing {
             let success = errors.isEmpty
             let output = (lines + errors.map { "失败：" + $0 }).joined(separator: "\n")
             self.deliver {
-                completion(.success(CleanResult(success: success, freedBytes: freed, output: output)))
+                completion(.success(CleanResult(success: success, freedBytes: freed, output: output, trashedBytes: trashed)))
             }
             if !success {
                 self.deliver { onProgress(CleanProgress(phase: "完成（\(errors.count) 项失败）", line: "")) }

@@ -32,3 +32,9 @@
 - OTTER_SELFTEST=clean-native-fixture：/tmp 预览→全选→删除，断言 bytes 与目录消失。
 - OTTER_SELFTEST=priv-guard：断言提权路径只保留 /Library/Caches 子项，/etc 与 .. 被拒绝。
 - OTTER_SELFTEST=uninstall-fixture：/tmp 假应用 + 残留，断言应用/残留/启动项被识别。
+## Otter 回收站（安全清理）
+
+- 清理（用户级）不再直接删除，而是移动到
+  ~/Library/Application Support/Otter/trash/<批次>/，并写 manifest.json。
+- 设置 → Otter 回收站：恢复全部 / 清空回收站（清空才真正释放磁盘）。
+- 系统缓存需要管理员，不进入回收站，仍为确认后直接删除。

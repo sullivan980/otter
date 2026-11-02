@@ -447,6 +447,12 @@ struct HUDView: View {
                                 .font(.system(size: 9, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            Button("退出「(p.name)」") { confirmKill(p, force: false) }
+                            Button("强制退出「(p.name)」", role: .destructive) { confirmKill(p, force: true) }
+                        }
+                        .help("右键可退出该进程")
                     }
                 }
             }
@@ -696,6 +702,28 @@ struct HUDView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .frame(width: 56, alignment: .trailing)
+        }
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("退出「(p.name)」") { confirmKill(p, force: false) }
+            Button("强制退出「(p.name)」", role: .destructive) { confirmKill(p, force: true) }
+        }
+    }
+
+    private func confirmKill(_ p: TopProcess, force: Bool) {
+        let alert = NSAlert()
+        alert.messageText = force ? "强制退出 (p.name)？" : "退出 (p.name)？"
+        alert.informativeText = force
+            ? "会立即结束进程（SIGKILL），未保存的数据可能丢失。"
+            : "会请求进程正常退出（SIGTERM）。"
+        alert.alertStyle = force ? .critical : .warning
+        alert.addButton(withTitle: force ? "强制退出" : "退出")
+        alert.addButton(withTitle: "取消")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        if case .failure(let error) = ProcessService.terminate(pid: p.id, force: force) {
+            OperationResultCenter.shared.post(kind: .error, title: "退出失败", message: error.localizedDescription)
+        } else {
+            OperationResultCenter.shared.post(kind: .success, title: "已请求退出", message: p.name)
         }
     }
 

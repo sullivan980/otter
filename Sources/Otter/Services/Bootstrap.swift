@@ -154,7 +154,13 @@ func runSelfTestNativeClean() {
     fm.createFile(atPath: root + "/b/y.bin", contents: Data(count: 1_000_000))
 
     NativeCleanService.testRootOverride = root
-    defer { NativeCleanService.testRootOverride = nil }
+    let trashRoot = "/tmp/otter-clean-trash"
+    try? fm.removeItem(atPath: trashRoot)
+    SafeTrashService.testRoot = URL(fileURLWithPath: trashRoot)
+    defer {
+        NativeCleanService.testRootOverride = nil
+        SafeTrashService.testRoot = nil
+    }
 
     let service = NativeCleanService()
     service.callbackQueue = DispatchQueue(label: "com.ottermac.selftest.nativeclean", qos: .userInitiated)
@@ -183,13 +189,14 @@ func runSelfTestNativeClean() {
     })
     let finished = sem.wait(timeout: .now() + 30) == .success
     let gone = !fm.fileExists(atPath: root + "/a") && !fm.fileExists(atPath: root + "/b")
-    let ok = finished && (result?.freedBytes ?? 0) >= 2_000_000 && gone
+    let trashed = result?.trashedBytes ?? 0
+    let ok = finished && trashed >= 2_000_000 && gone
     emitSelfTestJSON([
         "mode": "clean-native-fixture",
         "ok": ok,
         "categories": plan.categories.count,
         "items": keys.count,
-        "freedBytes": result?.freedBytes ?? 0,
+        "trashedBytes": result?.trashedBytes ?? 0,
         "deleted": result?.success ?? false,
         "gone": gone
     ])

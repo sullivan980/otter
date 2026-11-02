@@ -151,6 +151,15 @@ final class SettingsUIState: ObservableObject {
     @Published var updateInfo: UpdateInfo?
     @Published var checkingUpdate = false
     @Published var downloadingUpdate = false
+    @Published var alertsEnabled = Prefs.shared.alertsEnabled
+    @Published var alertCPU = Prefs.shared.alertCPU
+    @Published var alertMem = Prefs.shared.alertMem
+    @Published var alertDisk = Prefs.shared.alertDisk
+    @Published var alertDuration = Prefs.shared.alertDuration
+    @Published var trashCount = 0
+    @Published var trashBytes: Int64 = 0
+    @Published var trashBatches = 0
+    @Published var confirmEmptyTrash = false
 }
 
 struct SettingsView: View {
@@ -175,9 +184,11 @@ struct SettingsView: View {
                     themeSection
                     generalSection
                     menuBarSection
+                    trashSection
                     whitelistSection
                     cleanRulesSection
                     updateSection
+                    alertsSection
                     diagnosticsSection
                     PermissionSection(model: permissions)
                     PluginSection(store: plugins)
@@ -193,6 +204,7 @@ struct SettingsView: View {
             refreshLoginActual()
             ui.notificationsEnabled = Prefs.shared.notificationsEnabled
             refreshNotificationStatus()
+            refreshTrash()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshNotificationStatus()
@@ -611,6 +623,58 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Otter 回收站
+
+    private var trashSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "Otter 回收站", trailing: "\(ui.trashCount) 项 · \(Fmt.bytes(Double(ui.trashBytes)))")
+                Text("清理的项目先移到这里（可恢复）；清空后才真正释放磁盘。系统缓存需要管理员，不进回收站。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button("恢复全部") {
+                        let result = SafeTrashService.shared.restore(all: true)
+                        ui.toast = "已恢复 \(result.restored) 项" + (result.errors.isEmpty ? "" : "，\(result.errors.count) 项失败")
+                        refreshTrash()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(ui.trashCount == 0)
+
+                    Button("清空回收站") { ui.confirmEmptyTrash = true }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .disabled(ui.trashCount == 0)
+
+                    Spacer()
+                    Button("刷新") { refreshTrash() }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: 10))
+                }
+            }
+        }
+        .alert("清空 Otter 回收站？", isPresented: $ui.confirmEmptyTrash) {
+            Button("取消", role: .cancel) {}
+            Button("清空", role: .destructive) {
+                let result = SafeTrashService.shared.empty()
+                ui.toast = "已清空 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))"
+                refreshTrash()
+            }
+        } message: {
+            Text("将永久删除 \(ui.trashCount) 项，无法恢复。")
+        }
+    }
+
+    private func refreshTrash() {
+        let batches = SafeTrashService.shared.list()
+        ui.trashBatches = batches.count
+        ui.trashCount = batches.reduce(0) { $0 + $1.count }
+        ui.trashBytes = batches.reduce(0) { $0 + $1.bytes }
+    }
+
     // MARK: 清理规则插件
 
     private var cleanRulesSection: some View {
@@ -655,6 +719,60 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
+        }
+    }
+
+    // MARK: 告警
+
+    private var alertsSection: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 10) {
+                SubHeader(text: "阈值告警", trailing: "默认关闭")
+                Text("指标连续超过阈值的时间达到设定值后发一次系统通知；冷却期内不重复。")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack {
+                    Toggle("启用告警", isOn: $ui.alertsEnabled)
+                        .toggleStyle(.switch)
+                        .font(.system(size: 11.5))
+                        .onChange(of: ui.alertsEnabled) { value in Prefs.shared.alertsEnabled = value }
+                    Spacer()
+                    Picker("持续", selection: $ui.alertDuration) {
+                        Text("10 秒").tag(10.0)
+                        Text("30 秒").tag(30.0)
+                        Text("60 秒").tag(60.0)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 170)
+                    .onChange(of: ui.alertDuration) { value in Prefs.shared.alertDuration = value }
+                }
+
+                thresholdRow("CPU", value: $ui.alertCPU, key: "cpu")
+                thresholdRow("内存", value: $ui.alertMem, key: "mem")
+                thresholdRow("磁盘", value: $ui.alertDisk, key: "disk")
+            }
+        }
+    }
+
+    private func thresholdRow(_ name: String, value: Binding<Double>, key: String) -> some View {
+        HStack(spacing: 10) {
+            Text(name).font(.system(size: 11)).frame(width: 36, alignment: .leading)
+            Slider(value: Binding(
+                get: { value.wrappedValue },
+                set: { newValue in
+                    value.wrappedValue = newValue
+                    switch key {
+                    case "cpu": Prefs.shared.alertCPU = newValue
+                    case "mem": Prefs.shared.alertMem = newValue
+                    default: Prefs.shared.alertDisk = newValue
+                    }
+                }
+            ), in: 50...100, step: 5)
+            Text("\(Int(value.wrappedValue))%")
+                .font(.system(size: 10.5, design: .monospaced))
+                .frame(width: 36, alignment: .trailing)
         }
     }
 
