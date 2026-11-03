@@ -26,7 +26,10 @@ enum PluginPendingAlert: Identifiable {
 
 struct PluginSection: View {
     @ObservedObject var store: PluginStore = PluginStore.shared
+    @ObservedObject private var themeStore = ThemeStore.shared
     @StateObject private var ui = PluginUIState()
+
+    private var accent: Color { themeStore.theme.accent }
 
     var body: some View {
         PanelCard {
@@ -136,17 +139,17 @@ struct PluginSection: View {
         return HStack(alignment: .center, spacing: 11) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(active ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.06))
+                    .fill(active ? accent.opacity(0.16) : Color.primary.opacity(0.06))
                     .frame(width: 32, height: 32)
                 Image(systemName: builtin ? "square.grid.2x2" : "puzzlepiece.extension")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(active ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(active ? accent : Color.secondary)
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(plugin.name).font(.system(size: 12, weight: .medium))
-                    KindTag(text: builtin ? L("内置","Built-in") : L("用户","User"), color: builtin ? .blue : .purple)
-                    if active { KindTag(text: L("已启用","Enabled"), color: .green) }
+                    KindTag(text: builtin ? L("内置","Built-in") : L("用户","User"), color: builtin ? accent : .secondary)
+                    if active { KindTag(text: L("已启用","Enabled"), color: accent) }
                 }
                 Text(L("\(plugin.id) · v\(plugin.version) · \(Int(plugin.resolvedWidth))×\(Int(plugin.resolvedHeight)) · \(plugin.rows.count) 行","\(plugin.id) · v\(plugin.version) · \(Int(plugin.resolvedWidth))×\(Int(plugin.resolvedHeight)) · \(plugin.rows.count) rows"))
                     .font(.system(size: 9.5, design: .monospaced))
@@ -177,11 +180,11 @@ struct PluginSection: View {
         .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(active ? Color.accentColor.opacity(0.08) : Color.primary.opacity(0.035))
+                .fill(active ? accent.opacity(0.08) : Color.primary.opacity(0.035))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(active ? Color.accentColor.opacity(0.35) : Color.clear, lineWidth: 1)
+                .strokeBorder(active ? accent.opacity(0.35) : Color.clear, lineWidth: 1)
         )
     }
 
