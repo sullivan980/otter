@@ -23,6 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "sensors":
+                let s = SensorService.read()
+                let ok = !s.thermalState.isEmpty
+                print("{\"mode\":\"sensors\",\"ok\":\(ok),\"gpu\":\(s.gpuPercent ?? -1),\"gpuMem\":\(s.gpuInUseBytes ?? -1),\"thermal\":\"\(s.thermalState)\",\"temp\":\(s.temperatureC ?? -1)}")
+                exit(0)
             case "startup-fixture":
                 let fm = FileManager.default
                 let root = "/tmp/otter-startup-fixture"

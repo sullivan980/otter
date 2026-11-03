@@ -6,6 +6,8 @@
 - 系统：macOS 版本、架构、机型、已运行时间
 - 磁盘：卷名、SSD/HDD、SMART 状态、可用 / 总量
 - 电池：健康度、循环次数、温度、供电状态（台式机显示未检测到）
+- 传感器：GPU 使用率 / GPU 内存（IOAccelerator）、热压力（ProcessInfo.thermalState）；
+  温度需要特权 SMC，当前显示「不可用」
 - Spotlight：mdutil 索引状态
 - 本地快照：tmutil 快照数量
 - 启动项：用户/系统 LaunchAgents 与系统 LaunchDaemons 数量

@@ -3,6 +3,7 @@ import SwiftUI
 final class MaintenanceViewModel: ObservableObject {
     @Published private(set) var report = MaintenanceReport()
     @Published private(set) var battery = BatteryReport()
+    @Published private(set) var sensors = SensorReport()
     @Published private(set) var isRefreshing = false
     @Published var errorText: String?
     @Published var dnsRunning = false
@@ -34,9 +35,11 @@ final class MaintenanceViewModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let r = MaintenanceService.collect()
             let b = BatteryService.read()
+            let s = SensorService.read()
             DispatchQueue.main.async {
                 self?.report = r
                 self?.battery = b
+                self?.sensors = s
                 self?.isRefreshing = false
             }
         }
@@ -80,6 +83,7 @@ struct MaintenanceView: View {
                             ("系统 LaunchDaemons", "\(model.report.systemDaemons)"),
                         ])
                     }
+                    sensorsCard
                     tasksPreview
                 }
                 .padding(.horizontal, 24)
@@ -92,6 +96,31 @@ struct MaintenanceView: View {
             Button("刷新", role: .destructive) { model.flushDNS() }
         } message: {
             Text("会请求一次管理员授权，并短暂影响域名解析；不会删除任何文件。")
+        }
+    }
+
+    private var sensorsCard: some View {
+        PanelCard {
+            VStack(alignment: .leading, spacing: 8) {
+                cardTitle("传感器", icon: "thermometer.medium")
+                HStack(spacing: 24) {
+                    sensorValue("GPU 使用率", model.sensors.gpuPercent.map { String(format: "%.0f%%", $0) } ?? "—")
+                    sensorValue("GPU 内存", model.sensors.gpuInUseBytes.map { Fmt.bytes(Double($0)) } ?? "—")
+                    sensorValue("热压力", model.sensors.thermalState)
+                    sensorValue("温度", model.sensors.temperatureC.map { String(format: "%.1f°C", $0) } ?? "不可用")
+                    Spacer()
+                }
+                Text("温度需要特权 SMC 访问，当前只读展示可用项；GPU 数据来自 IOAccelerator。")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private func sensorValue(_ name: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(name).font(.system(size: 9)).foregroundStyle(.tertiary)
+            Text(value).font(.system(size: 12, weight: .medium, design: .monospaced))
         }
     }
 
