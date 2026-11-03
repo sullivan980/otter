@@ -40,3 +40,17 @@ GitHub API 限流（共享出口 IP 常见）时会自动退回 releases/latest 
 
 ## 自测
 OTTER_SELFTEST=update-check：解析 GitHub/自定义 JSON，并断言版本比较（0.14>0.13、0.9<0.10）。
+## 下载并自动安装（0.29+）
+设置 → 更新 → 发现新版本后点「下载并安装」：
+
+1. 下载 DMG 到临时目录；
+2. 校验 DMG 内 Otter.app 的 bundle id、版本号与签名；
+3. 复制到 /Applications 下的暂存目录；
+4. Otter 退出后，由 helper 替换 /Applications/Otter.app 并重新启动。
+
+安全限制：
+- 只允许从 github.com / githubusercontent.com 下载；
+- 版本必须与更新源声明一致；
+- 失败不会删除正在运行的旧版本。
+
+注意：0.27 / 0.28 本身没有自动安装逻辑，需要手动装一次 0.29+，之后才能享受自动安装。

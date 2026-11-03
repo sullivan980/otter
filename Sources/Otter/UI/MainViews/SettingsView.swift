@@ -151,6 +151,8 @@ final class SettingsUIState: ObservableObject {
     @Published var updateInfo: UpdateInfo?
     @Published var checkingUpdate = false
     @Published var downloadingUpdate = false
+    @Published var installingUpdate = false
+    @Published var confirmInstall = false
     @Published var alertsEnabled = Prefs.shared.alertsEnabled
     @Published var alertCPU = Prefs.shared.alertCPU
     @Published var alertMem = Prefs.shared.alertMem
@@ -895,7 +897,7 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("更新", "Updates"), trailing: "\(L("当前", "Current")) v\(appVersion)")
-                Text(L("填 GitHub Releases API 或自定义 JSON 地址（https）。只检查与下载 DMG，不自动安装。","GitHub Releases API or custom JSON (https). Downloads the DMG; never installs automatically."))
+                Text(L("填 GitHub Releases API 或自定义 JSON 地址（https）。可自动下载并替换安装，重启 Otter。","GitHub Releases API or custom JSON (https). Can download and install automatically, then restart Otter."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -932,10 +934,16 @@ struct SettingsView: View {
                         }
                         HStack(spacing: 8) {
                             if info.dmgURL != nil {
-                                Button(ui.downloadingUpdate ? L("下载中…","Downloading…") : L("下载 DMG","Download DMG")) { downloadUpdate(info) }
-                                    .buttonStyle(.borderedProminent)
+                                Button(ui.installingUpdate ? L("安装中…","Installing…") : L("下载并安装","Download & Install")) {
+                                    ui.confirmInstall = true
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .disabled(ui.installingUpdate || ui.downloadingUpdate)
+                                Button(ui.downloadingUpdate ? L("下载中…","Downloading…") : L("仅下载 DMG","Download DMG Only")) { downloadUpdate(info) }
+                                    .buttonStyle(.bordered)
                                     .controlSize(.small)
-                                    .disabled(ui.downloadingUpdate)
+                                    .disabled(ui.downloadingUpdate || ui.installingUpdate)
                             }
                             if let page = info.pageURL {
                                 Button(L("打开发布页","Open Release Page")) { NSWorkspace.shared.open(page) }
@@ -946,6 +954,14 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+        .alert(L("下载并安装 v\(ui.updateInfo?.version ?? "")？","Download and install v\(ui.updateInfo?.version ?? "")?") , isPresented: $ui.confirmInstall) {
+            Button(L("取消","Cancel"), role: .cancel) {}
+            Button(L("下载并安装","Download & Install"), role: .destructive) {
+                if let info = ui.updateInfo { downloadAndInstall(info) }
+            }
+        } message: {
+            Text(L("将下载 DMG、校验版本并替换 /Applications/Otter.app，完成后 Otter 会退出并重启。","Downloads the DMG, verifies the version, replaces /Applications/Otter.app, then Otter quits and relaunches."))
         }
     }
 
@@ -963,6 +979,33 @@ struct SettingsView: View {
                 ui.updateStatus = L("发现新版本 v\(info.version)","Version v\(info.version) available")
             case .failure(let message):
                 ui.updateStatus = message
+            }
+        }
+    }
+
+    private func downloadAndInstall(_ info: UpdateInfo) {
+        guard let url = info.dmgURL else { return }
+        ui.installingUpdate = true
+        ui.updateStatus = L("正在下载更新…", "Downloading update…")
+        UpdateService.download(url) { result in
+            switch result {
+            case .success(let file):
+                ui.updateStatus = L("正在校验并安装…", "Verifying and installing…")
+                UpdateInstaller.installDownloaded(dmgURL: url, expectedVersion: info.version) { installResult in
+                    DispatchQueue.main.async {
+                        ui.installingUpdate = false
+                        switch installResult {
+                        case .success:
+                            ui.updateStatus = L("安装完成，正在重启…", "Installed. Restarting…")
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NSApp.terminate(nil) }
+                        case .failure(let error):
+                            ui.updateStatus = L("安装失败：", "Install failed: ") + error.localizedDescription
+                        }
+                    }
+                }
+            case .failure(let error):
+                ui.installingUpdate = false
+                ui.updateStatus = L("下载失败：", "Download failed: ") + error.localizedDescription
             }
         }
     }

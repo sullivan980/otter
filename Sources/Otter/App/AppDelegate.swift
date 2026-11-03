@@ -31,6 +31,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "update-install-fixture":
+                let fm = FileManager.default
+                let root = "/tmp/otter-install-fixture"
+                try? fm.removeItem(atPath: root)
+                let target = root + "/target/Otter.app"
+                let staged = root + "/stage/Otter.app"
+                func makeApp(_ path: String, _ version: String) {
+                    try? fm.createDirectory(atPath: path + "/Contents/MacOS", withIntermediateDirectories: true)
+                    let plist: [String: Any] = [
+                        "CFBundleIdentifier": "com.ottermac.app",
+                        "CFBundleShortVersionString": version,
+                        "CFBundleExecutable": "Otter",
+                        "CFBundleName": "Otter",
+                    ]
+                    if let data = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) {
+                        fm.createFile(atPath: path + "/Contents/Info.plist", contents: data)
+                    }
+                    fm.createFile(atPath: path + "/Contents/MacOS/Otter", contents: Data("#!/bin/sh\nexit 0\n".utf8))
+                    try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path + "/Contents/MacOS/Otter")
+                }
+                makeApp(target, "1.0")
+                makeApp(staged, "2.0")
+                let sleeper = Process()
+                sleeper.executableURL = URL(fileURLWithPath: "/bin/sleep")
+                sleeper.arguments = ["2"]
+                try? sleeper.run()
+                var spawnError: String?
+                do {
+                    try UpdateInstaller.replace(stagedApp: URL(fileURLWithPath: staged),
+                                                targetApp: URL(fileURLWithPath: target),
+                                                expectedVersion: "2.0",
+                                                waitPID: sleeper.processIdentifier,
+                                                launchAfter: false) { _ in }
+                } catch { spawnError = error.localizedDescription }
+                sleeper.waitUntilExit()
+                let deadline = Date().addingTimeInterval(8)
+                func currentVersion() -> String {
+                    guard let data = fm.contents(atPath: target + "/Contents/Info.plist"),
+                          let obj = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any]
+                    else { return "?" }
+                    return obj["CFBundleShortVersionString"] as? String ?? "?"
+                }
+                while currentVersion() != "2.0" && Date() < deadline {
+                    RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+                }
+                let trusted = UpdateInstaller.isTrustedDMG(URL(string: "https://github.com/a/b/Otter.dmg")!)
+                    && !UpdateInstaller.isTrustedDMG(URL(string: "https://evil.example.com/Otter.dmg")!)
+                let ok = currentVersion() == "2.0" && trusted && spawnError == nil
+                print("{\"mode\":\"update-install-fixture\",\"ok\":\(ok),\"version\":\"\(currentVersion())\",\"trusted\":\(trusted),\"error\":\"\(spawnError ?? "")\"}")
+                exit(0)
             case "i18n":
                 let was = ProcessInfo.processInfo.environment["OTTER_LANG"]
                 setenv("OTTER_LANG", "en", 1)

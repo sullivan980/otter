@@ -81,7 +81,7 @@ final class Prefs {
     var updateFeedURL: String {
         get {
             let v = d.string(forKey: Key.updateFeedURL.rawValue) ?? ""
-            return v.isEmpty ? "https://api.github.com/repos/sullivan980/otter/releases/latest" : v
+            return v.isEmpty ? "https://raw.githubusercontent.com/sullivan980/otter/master/update.json" : v
         }
         set { d.set(newValue, forKey: Key.updateFeedURL.rawValue) }
     }
