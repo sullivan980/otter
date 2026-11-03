@@ -420,6 +420,8 @@ extension PluginStore {
                 }
             }
         }
-        return "{\"mode\":\"plugins\",\"valid\":[" + valid.map { "\"" + $0 + "\"" }.joined(separator: ",") + "],\"rejected\":[" + rejected.joined(separator: ",") + "]}"
+        let validJSON = valid.map { "\"" + $0 + "\"" }.joined(separator: ",")
+        let rejectedJSON = rejected.joined(separator: ",")
+        return "{\"mode\":\"plugins\",\"valid\":[" + validJSON + "],\"rejected\":[" + rejectedJSON + "]}"
     }
 }
