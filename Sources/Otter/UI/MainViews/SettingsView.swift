@@ -19,10 +19,10 @@ final class MenuBarSettings: ObservableObject {
 
     static let defs: [MetricDef] = [
         MetricDef(id: "cpu", name: "CPU", icon: "cpu"),
-        MetricDef(id: "mem", name: "内存", icon: "memorychip"),
-        MetricDef(id: "disk", name: "磁盘", icon: "internaldrive"),
-        MetricDef(id: "up", name: "上传", icon: "arrow.up"),
-        MetricDef(id: "down", name: "下载", icon: "arrow.down")
+        MetricDef(id: "mem", name: L("内存","Memory"), icon: "memorychip"),
+        MetricDef(id: "disk", name: L("磁盘","Disk"), icon: "internaldrive"),
+        MetricDef(id: "up", name: L("上传","Up"), icon: "arrow.up"),
+        MetricDef(id: "down", name: L("下载","Down"), icon: "arrow.down")
     ]
 
     @Published var preset: String { didSet { persist() } }
@@ -229,21 +229,21 @@ struct SettingsView: View {
 
                 Divider().opacity(0.5)
                 HStack(spacing: 10) {
-                    Button("打开主题目录") {
+                    Button(L("打开主题目录","Open Themes Folder")) {
                         if let dir = try? themeStore.ensureThemesDirectory() {
                             NSWorkspace.shared.open(dir)
                         }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    Button("重新加载") {
+                    Button(L("重新加载","Reload")) {
                         themeStore.reload()
-                        ui.toast = "已重新加载主题（用户目录同名 id 会覆盖内置）"
+                        ui.toast = L("已重新加载主题（用户目录同名 id 会覆盖内置）","Themes reloaded (user themes override built-ins)")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     Spacer()
-                    Text("放 \(themeStore.themes.count - AppTheme.builtins.count) 个自定义主题 · 改完点重新加载")
+                    Text(L("放 \(themeStore.themes.count - AppTheme.builtins.count) 个自定义主题 · 改完点重新加载","\(themeStore.themes.count - AppTheme.builtins.count) custom themes · reload after editing"))
                         .font(.system(size: 9.5))
                         .foregroundStyle(.tertiary)
                 }
@@ -252,6 +252,28 @@ struct SettingsView: View {
     }
 
 
+    private func themeName(_ item: AppTheme) -> String {
+        switch item.id {
+        case "A": return L("河岸晨雾", "River Morning")
+        case "B": return L("温泉汤屋", "Onsen")
+        case "C": return L("深潜", "Deep Dive")
+        case "D": return L("纸水獭", "Paper Otter")
+        case "E": return L("水波玻璃", "Water Glass")
+        default: return item.name
+        }
+    }
+
+    private func themeTagline(_ item: AppTheme) -> String {
+        switch item.id {
+        case "A": return L("淡水青蓝 · 安静干净", "Fresh teal, calm and clean")
+        case "B": return L("米白陶土 · 蒸汽柔光", "Warm clay, soft steam")
+        case "C": return L("深海炭色 · 夜间低刺激", "Deep ocean tones, easy at night")
+        case "D": return L("米纸墨线 · 手账感", "Ink on paper")
+        case "E": return L("液态玻璃 · 最系统原生", "Liquid glass, native")
+        default: return item.tagline
+        }
+    }
+
     private func themeRow(_ item: AppTheme) -> some View {
         Button {
             themeStore.theme = item
@@ -259,8 +281,8 @@ struct SettingsView: View {
             HStack(spacing: 12) {
                 themeBadge(item)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name).font(.system(size: 12, weight: .medium))
-                    Text(item.tagline.isEmpty ? "自定义主题" : item.tagline)
+                    Text(themeName(item)).font(.system(size: 12, weight: .medium))
+                    Text(item.tagline.isEmpty ? L("自定义主题","Custom Theme") : themeTagline(item))
                         .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                 }
@@ -311,7 +333,7 @@ struct SettingsView: View {
                            desc: L("切换后需要重启 Otter 生效。", "Restart Otter to apply.")) {
                     Picker("", selection: $ui.language) {
                         Text(L("跟随系统", "System")).tag("system")
-                        Text("中文").tag("zh")
+                        Text(L("中文","中文")).tag("zh")
                         Text("English").tag("en")
                     }
                     .pickerStyle(.segmented)
@@ -324,8 +346,8 @@ struct SettingsView: View {
 
                 Divider()
 
-                settingRow(title: "登录时自动启动",
-                           desc: "开机后常驻菜单栏，指标随系统启动。") {
+                settingRow(title: L("登录时自动启动","Launch at login"),
+                           desc: L("开机后常驻菜单栏，指标随系统启动。","Stay in the menu bar after login.")) {
                     Toggle("", isOn: launchBinding)
                         .toggleStyle(.switch)
                         .labelsHidden()
@@ -333,14 +355,14 @@ struct SettingsView: View {
                 if ui.launchAtLogin != ui.loginActual {
                     HStack(spacing: 6) {
                         Text(ui.launchAtLogin
-                             ? "系统尚未记录该登录项（开发构建未签名时常见）。打包签名后会正常生效。"
-                             : "系统仍显示登录项已开启，可能需稍等生效。")
+                             ? L("系统尚未记录该登录项（开发构建未签名时常见）。打包签名后会正常生效。","The system has not recorded this login item (common for unsigned dev builds).")
+                             : L("系统仍显示登录项已开启，可能需稍等生效。","The system still shows the login item enabled; it may take a moment."))
                             .font(.system(size: 10))
                             .foregroundStyle(.orange)
-                        Button("重新检测") {
+                        Button(L("重新检测","Recheck")) {
                             refreshLoginActual()
                             if ui.launchAtLogin == ui.loginActual {
-                                ui.toast = "登录项状态已同步。"
+                                ui.toast = L("登录项状态已同步。","Login item status synced.")
                             }
                         }
                         .buttonStyle(.link)
@@ -350,27 +372,27 @@ struct SettingsView: View {
 
                 Divider()
 
-                settingRow(title: "系统通知",
+                settingRow(title: L("系统通知","Notifications"),
                            desc: notificationDescription) {
                     HStack(spacing: 8) {
                         Text(notificationStatusLabel)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(ui.notificationStatus == .denied ? Color.orange : Color.secondary)
                         if ui.notificationStatus == .denied {
-                            Button("打开通知设置") {
+                            Button(L("打开通知设置","Open Notification Settings")) {
                                 Notifications.shared.openSystemSettings()
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                         }
-                        Button("发送测试") {
+                        Button(L("发送测试","Send Test")) {
                             if ui.notificationStatus == .denied {
-                                ui.toast = "系统拒绝了原生通知：已用脚本通知投递；也可在「通知」设置里允许 Otter。"
+                                ui.toast = L("系统拒绝了原生通知：已用脚本通知投递；也可在「通知」设置里允许 Otter。","Native notifications denied; delivered via script. You can allow Otter in Notifications settings.")
                             } else {
-                                ui.toast = "已发送测试通知（若没看到横幅，请检查系统通知设置）。"
+                                ui.toast = L("已发送测试通知（若没看到横幅，请检查系统通知设置）。","Test notification sent (check system notification settings if not visible).")
                             }
-                            Notifications.shared.post(title: "Otter 通知测试",
-                                                      body: "通知已开启，清理与卸载完成后会在这里提醒你。")
+                            Notifications.shared.post(title: L("Otter 通知测试","Otter Notification Test"),
+                                                      body: L("通知已开启，清理与卸载完成后会在这里提醒你。","Notifications are on; cleaning and uninstall results will appear here."))
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -383,18 +405,18 @@ struct SettingsView: View {
 
                 Divider()
 
-                settingRow(title: "欢迎引导",
-                           desc: "三步了解菜单栏、系统权限与自启设置，可随时重看。") {
-                    Button("重看引导") {
+                settingRow(title: L("欢迎引导","Welcome Guide"),
+                           desc: L("三步了解菜单栏、系统权限与自启设置，可随时重看。","Menu bar, permissions and login item in three steps.")) {
+                    Button(L("重看引导","Show Guide")) {
                         OnboardingController.shared.show(force: true)
-                        ui.toast = "已请求打开欢迎引导。"
+                        ui.toast = L("已请求打开欢迎引导。","Welcome guide requested.")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
 
                 if let toast = ui.toast {
-                    StatusBanner(kind: .info, title: toast, actionTitle: "知道了") { ui.toast = nil }
+                    StatusBanner(kind: .info, title: toast, actionTitle: L("知道了","OK")) { ui.toast = nil }
                 }
             }
         }
@@ -426,20 +448,20 @@ struct SettingsView: View {
 
     private var notificationStatusLabel: String {
         switch ui.notificationStatus {
-        case .authorized, .provisional, .ephemeral: return "已允许"
-        case .denied: return "已拒绝"
-        default: return "未请求"
+        case .authorized, .provisional, .ephemeral: return L("已允许","Allowed")
+        case .denied: return L("已拒绝","Denied")
+        default: return L("未请求","Not requested")
         }
     }
 
     private var notificationDescription: String {
         switch ui.notificationStatus {
         case .denied:
-            return "系统拒绝了原生通知（未签名构建常见）：Otter 会自动用脚本方式投递，仍能收到横幅；点「打开通知设置」可尝试允许 Otter。"
+            return L("系统拒绝了原生通知（未签名构建常见）：Otter 会自动用脚本方式投递，仍能收到横幅；点「打开通知设置」可尝试允许 Otter。","Native notifications denied (common for unsigned builds). Otter falls back to script notifications.")
         case .authorized, .provisional, .ephemeral:
-            return "清理或卸载完成后发送通知。"
+            return L("清理或卸载完成后发送通知。","Notify after cleaning or uninstalling.")
         default:
-            return "清理或卸载完成后发送通知（需系统授权）。"
+            return L("清理或卸载完成后发送通知（需系统授权）。","Notify after cleaning or uninstalling (requires permission).")
         }
     }
 
@@ -464,17 +486,17 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 SubHeader(text: L("菜单栏显示", "Menu Bar"))
-                Text("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载默认不勾选，需要时打开即可；獭图标默认不显示。")
+                Text(L("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载默认不勾选，需要时打开即可；獭图标默认不显示。","Custom only: pick metrics, reorder, choose style. Up/Down are off by default; otter icon hidden."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 8) {
-                    Toggle("显示獭图标", isOn: $menu.showIcon)
+                    Toggle(L("显示獭图标","Show otter icon"), isOn: $menu.showIcon)
                         .toggleStyle(.switch)
                         .font(.system(size: 11.5))
                     Spacer()
-                    Text("默认不显示，只留数字")
+                    Text(L("默认不显示，只留数字","Hidden by default; numbers only"))
                         .font(.system(size: 9.5))
                         .foregroundStyle(.tertiary)
                 }
@@ -484,18 +506,18 @@ struct SettingsView: View {
                 Divider()
 
                 HStack(spacing: 10) {
-                    Text("显示样式").font(.system(size: 11, weight: .medium))
+                    Text(L("显示样式","Style")).font(.system(size: 11, weight: .medium))
                     Spacer()
-                    Button("打开样式目录") {
+                    Button(L("打开样式目录","Open Styles Folder")) {
                         if let dir = try? menuBarStyles.ensureStylesDirectory() {
                             NSWorkspace.shared.open(dir)
                         }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    Button("重新加载") {
+                    Button(L("重新加载","Reload")) {
                         menuBarStyles.reload()
-                        ui.toast = "已重新加载菜单栏样式"
+                        ui.toast = L("已重新加载菜单栏样式","Menu bar styles reloaded")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -553,7 +575,7 @@ struct SettingsView: View {
 
                 Divider()
                 HStack {
-                    Toggle("按负载着色（≥60% 黄 / ≥85% 红）", isOn: $menu.colorByLoad)
+                    Toggle(L("按负载着色（≥60% 黄 / ≥85% 红）","Color by load (≥60% yellow / ≥85% red)"), isOn: $menu.colorByLoad)
                         .toggleStyle(.switch)
                         .font(.system(size: 11.5))
                     Spacer()
@@ -574,7 +596,7 @@ struct SettingsView: View {
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
                 if !style.isBuiltin {
-                    Text("自定义").font(.system(size: 8.5)).foregroundStyle(.tertiary)
+                    Text(L("自定义","Custom")).font(.system(size: 8.5)).foregroundStyle(.tertiary)
                 }
                 if selected {
                     Image(systemName: "checkmark.circle.fill")
@@ -603,7 +625,7 @@ struct SettingsView: View {
         let items = menu.previewItems(metrics: state.metrics)
         let style = menuBarStyles.style
         return HStack(spacing: 8) {
-            Text("预览").font(.system(size: 10)).foregroundStyle(.tertiary)
+            Text(L("预览","Preview")).font(.system(size: 10)).foregroundStyle(.tertiary)
             HStack(spacing: 0) {
                 if menu.showIcon {
                     Image(systemName: "water.waves")
@@ -641,7 +663,7 @@ struct SettingsView: View {
                     .fill(Color.primary.opacity(0.08))
             )
             Spacer()
-            Text("实时刷新").font(.system(size: 9)).foregroundStyle(.tertiary)
+            Text(L("实时刷新","Live refresh")).font(.system(size: 9)).foregroundStyle(.tertiary)
         }
     }
 
@@ -651,42 +673,42 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("Otter 回收站", "Otter Trash"), trailing: "\(ui.trashCount) \(L("项", "items")) · \(Fmt.bytes(Double(ui.trashBytes)))")
-                Text("清理的项目先移到这里（可恢复）；清空后才真正释放磁盘。系统缓存需要管理员，不进回收站。")
+                Text(L("清理的项目先移到这里（可恢复）；清空后才真正释放磁盘。系统缓存需要管理员，不进回收站。","Cleaned items move here first (restorable); disk space is freed after emptying. System caches require admin and do not enter Trash."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 8) {
-                    Button("恢复全部") {
+                    Button(L("恢复全部","Restore All")) {
                         let result = SafeTrashService.shared.restore(all: true)
-                        ui.toast = "已恢复 \(result.restored) 项" + (result.errors.isEmpty ? "" : "，\(result.errors.count) 项失败")
+                        ui.toast = L("已恢复 \(result.restored) 项","Restored \(result.restored) items") + (result.errors.isEmpty ? "" : "，\(result.errors.count) 项失败")
                         refreshTrash()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(ui.trashCount == 0)
 
-                    Button("清空回收站") { ui.confirmEmptyTrash = true }
+                    Button(L("清空回收站","Empty Trash")) { ui.confirmEmptyTrash = true }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                         .disabled(ui.trashCount == 0)
 
                     Spacer()
-                    Button("刷新") { refreshTrash() }
+                    Button(L("刷新","Refresh")) { refreshTrash() }
                         .buttonStyle(.borderless)
                         .font(.system(size: 10))
                 }
             }
         }
-        .alert("清空 Otter 回收站？", isPresented: $ui.confirmEmptyTrash) {
-            Button("取消", role: .cancel) {}
-            Button("清空", role: .destructive) {
+        .alert(L("清空 Otter 回收站？","Empty Otter Trash?"), isPresented: $ui.confirmEmptyTrash) {
+            Button(L("取消","Cancel"), role: .cancel) {}
+            Button(L("清空","Empty"), role: .destructive) {
                 let result = SafeTrashService.shared.empty()
-                ui.toast = "已清空 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))"
+                ui.toast = L("已清空 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))","Emptied \(result.removed) items, freed \(Fmt.bytes(Double(result.bytes)))")
                 refreshTrash()
             }
         } message: {
-            Text("将永久删除 \(ui.trashCount) 项，无法恢复。")
+            Text(L("将永久删除 \(ui.trashCount) 项，无法恢复。","Permanently delete \(ui.trashCount) items. This cannot be undone."))
         }
     }
 
@@ -703,7 +725,7 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("清理规则插件", "Clean Rule Plugins"), trailing: "\(cleanRules.rules.count)")
-                Text("自定义清理分类：JSON 放 ~/Library/Application Support/Otter/cleanrules/，路径必须在主目录下；扫描后作为额外分类出现，白名单依然生效。")
+                Text(L("自定义清理分类：JSON 放 ~/Library/Application Support/Otter/cleanrules/，路径必须在主目录下；扫描后作为额外分类出现，白名单依然生效。","Custom clean categories: JSON in ~/Library/Application Support/Otter/cleanrules/. Paths must be under your home folder; whitelist still applies."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -729,13 +751,13 @@ struct SettingsView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Button("打开规则目录") {
+                    Button(L("打开规则目录","Open Rules Folder")) {
                         if let dir = try? cleanRules.ensureRulesDirectory() { NSWorkspace.shared.open(dir) }
                     }
                     .buttonStyle(.bordered).controlSize(.small)
-                    Button("重新加载") {
+                    Button(L("重新加载","Reload")) {
                         cleanRules.reload()
-                        ui.toast = "已重新加载清理规则"
+                        ui.toast = L("已重新加载清理规则","Clean rules reloaded")
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                     Spacer()
@@ -751,21 +773,21 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("提醒", "Reminders"))
                 HStack {
-                    Toggle("低磁盘提醒", isOn: $ui.lowDiskReminder)
+                    Toggle(L("低磁盘提醒","Low disk reminder"), isOn: $ui.lowDiskReminder)
                         .toggleStyle(.switch)
                         .font(.system(size: 11.5))
                         .onChange(of: ui.lowDiskReminder) { value in Prefs.shared.lowDiskReminderEnabled = value }
                     Spacer()
-                    Text("超过告警阈值时每天最多提醒一次").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                    Text(L("超过告警阈值时每天最多提醒一次","At most one reminder per day above the alert threshold")).font(.system(size: 9.5)).foregroundStyle(.tertiary)
                 }
                 HStack {
-                    Text("定期清理提醒").font(.system(size: 11.5))
+                    Text(L("定期清理提醒","Cleanup reminder")).font(.system(size: 11.5))
                     Spacer()
                     Picker("", selection: $ui.cleanReminderDays) {
-                        Text("关闭").tag(0)
-                        Text("7 天").tag(7)
-                        Text("14 天").tag(14)
-                        Text("30 天").tag(30)
+                        Text(L("关闭","Off")).tag(0)
+                        Text(L("7 天","7 days")).tag(7)
+                        Text(L("14 天","14 days")).tag(14)
+                        Text(L("30 天","30 days")).tag(30)
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 260)
@@ -781,21 +803,21 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("阈值告警", "Threshold Alerts"), trailing: L("默认关闭", "Off by default"))
-                Text("指标连续超过阈值的时间达到设定值后发一次系统通知；冷却期内不重复。")
+                Text(L("指标连续超过阈值的时间达到设定值后发一次系统通知；冷却期内不重复。","Notify once when a metric stays above its threshold; no repeats during cooldown."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack {
-                    Toggle("启用告警", isOn: $ui.alertsEnabled)
+                    Toggle(L("启用告警","Enable alerts"), isOn: $ui.alertsEnabled)
                         .toggleStyle(.switch)
                         .font(.system(size: 11.5))
                         .onChange(of: ui.alertsEnabled) { value in Prefs.shared.alertsEnabled = value }
                     Spacer()
-                    Picker("持续", selection: $ui.alertDuration) {
-                        Text("10 秒").tag(10.0)
-                        Text("30 秒").tag(30.0)
-                        Text("60 秒").tag(60.0)
+                    Picker(L("持续","Sustained"), selection: $ui.alertDuration) {
+                        Text(L("10 秒","10s")).tag(10.0)
+                        Text(L("30 秒","30s")).tag(30.0)
+                        Text(L("60 秒","60s")).tag(60.0)
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 170)
@@ -803,8 +825,8 @@ struct SettingsView: View {
                 }
 
                 thresholdRow("CPU", value: $ui.alertCPU, key: "cpu")
-                thresholdRow("内存", value: $ui.alertMem, key: "mem")
-                thresholdRow("磁盘", value: $ui.alertDisk, key: "disk")
+                thresholdRow(L("内存","Memory"), value: $ui.alertMem, key: "mem")
+                thresholdRow(L("磁盘","Disk"), value: $ui.alertDisk, key: "disk")
             }
         }
     }
@@ -835,29 +857,29 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("诊断与日志", "Diagnostics"), trailing: L("不上传任何数据", "No data uploaded"))
-                Text("导出内容：版本、系统/硬件、实时指标、偏好、插件加载错误、最近 100 行操作日志、Otter 崩溃报告列表。")
+                Text(L("导出内容：版本、系统/硬件、实时指标、偏好、插件加载错误、最近 100 行操作日志、Otter 崩溃报告列表。","Includes version, hardware, metrics, preferences, plugin errors, last 100 log lines and Otter crash reports."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 8) {
-                    Button("保存诊断报告") {
+                    Button(L("保存诊断报告","Save Diagnostics")) {
                         if let url = DiagnosticsService.export(metrics: state.metrics, state: state) {
-                            ui.toast = "已保存：\(url.path)"
+                            ui.toast = L("已保存：\(url.path)","Saved: \(url.path)")
                             NSWorkspace.shared.activateFileViewerSelecting([url])
                         } else {
-                            ui.toast = "保存失败"
+                            ui.toast = L("保存失败","Save failed")
                         }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
 
-                    Button("复制诊断文本") {
+                    Button(L("复制诊断文本","Copy Diagnostics")) {
                         let text = DiagnosticsService.text(metrics: state.metrics, state: state)
                         let pb = NSPasteboard.general
                         pb.clearContents()
                         pb.setString(text, forType: .string)
-                        ui.toast = "诊断文本已复制"
+                        ui.toast = L("诊断文本已复制","Diagnostics copied")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -873,7 +895,7 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("更新", "Updates"), trailing: "\(L("当前", "Current")) v\(appVersion)")
-                Text("填 GitHub Releases API 或自定义 JSON 地址（https）。只检查与下载 DMG，不自动安装。")
+                Text(L("填 GitHub Releases API 或自定义 JSON 地址（https）。只检查与下载 DMG，不自动安装。","GitHub Releases API or custom JSON (https). Downloads the DMG; never installs automatically."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -886,7 +908,7 @@ struct SettingsView: View {
                               ))
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 10.5, design: .monospaced))
-                    Button(ui.checkingUpdate ? "检查中…" : "检查更新") { checkUpdate() }
+                    Button(ui.checkingUpdate ? L("检查中…","Checking…") : L("检查更新","Check for Updates")) { checkUpdate() }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .disabled(ui.checkingUpdate || ui.updateFeed.isEmpty)
@@ -895,12 +917,12 @@ struct SettingsView: View {
                 if let status = ui.updateStatus {
                     Text(status)
                         .font(.system(size: 10.5))
-                        .foregroundStyle(status.hasPrefix("发现") ? Color.accentColor : Color.secondary)
+                        .foregroundStyle(status.hasPrefix(L("发现","Found")) ? Color.accentColor : Color.secondary)
                 }
 
                 if let info = ui.updateInfo {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("发现新版本 v\(info.version)")
+                        Text(L("发现新版本 v\(info.version)","Version v\(info.version) available"))
                             .font(.system(size: 11.5, weight: .medium))
                         if !info.notes.isEmpty {
                             Text(info.notes)
@@ -910,13 +932,13 @@ struct SettingsView: View {
                         }
                         HStack(spacing: 8) {
                             if info.dmgURL != nil {
-                                Button(ui.downloadingUpdate ? "下载中…" : "下载 DMG") { downloadUpdate(info) }
+                                Button(ui.downloadingUpdate ? L("下载中…","Downloading…") : L("下载 DMG","Download DMG")) { downloadUpdate(info) }
                                     .buttonStyle(.borderedProminent)
                                     .controlSize(.small)
                                     .disabled(ui.downloadingUpdate)
                             }
                             if let page = info.pageURL {
-                                Button("打开发布页") { NSWorkspace.shared.open(page) }
+                                Button(L("打开发布页","Open Release Page")) { NSWorkspace.shared.open(page) }
                                     .buttonStyle(.bordered)
                                     .controlSize(.small)
                             }
@@ -935,10 +957,10 @@ struct SettingsView: View {
             ui.checkingUpdate = false
             switch result {
             case .upToDate(let current):
-                ui.updateStatus = "已是最新版本（v\(current)）"
+                ui.updateStatus = L("已是最新版本（v\(current)）","Up to date (v\(current))")
             case .available(let info):
                 ui.updateInfo = info
-                ui.updateStatus = "发现新版本 v\(info.version)"
+                ui.updateStatus = L("发现新版本 v\(info.version)","Version v\(info.version) available")
             case .failure(let message):
                 ui.updateStatus = message
             }
@@ -948,15 +970,15 @@ struct SettingsView: View {
     private func downloadUpdate(_ info: UpdateInfo) {
         guard let url = info.dmgURL else { return }
         ui.downloadingUpdate = true
-        ui.updateStatus = "正在下载…"
+        ui.updateStatus = L("正在下载…","Downloading…")
         UpdateService.download(url) { result in
             ui.downloadingUpdate = false
             switch result {
             case .success(let file):
-                ui.updateStatus = "已下载到 \(file.path)，打开后拖入 Applications 覆盖安装。"
+                ui.updateStatus = L("已下载到 \(file.path)，打开后拖入 Applications 覆盖安装。","Downloaded to \(file.path). Drag into Applications to update.")
                 NSWorkspace.shared.open(file)
             case .failure(let error):
-                ui.updateStatus = "下载失败：\(error.localizedDescription)"
+                ui.updateStatus = L("下载失败：\(error.localizedDescription)","Download failed: \(error.localizedDescription)")
             }
         }
     }
@@ -967,13 +989,13 @@ struct SettingsView: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
                 SubHeader(text: L("清理保护", "Clean Protection"), trailing: "\(whitelist.paths.count)")
-                Text("这些路径不会被安装包 / 项目产物清理删除；适合放正在开发的项目或重要目录。")
+                Text(L("这些路径不会被安装包 / 项目产物清理删除；适合放正在开发的项目或重要目录。","These paths are never deleted by installer/artifact cleaning."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if whitelist.paths.isEmpty {
-                    Text("暂无保护路径").font(.system(size: 10.5)).foregroundStyle(.tertiary)
+                    Text(L("暂无保护路径","No protected paths")).font(.system(size: 10.5)).foregroundStyle(.tertiary)
                 } else {
                     ForEach(whitelist.paths, id: \.self) { path in
                         HStack(spacing: 8) {
@@ -985,7 +1007,7 @@ struct SettingsView: View {
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                             Spacer()
-                            Button("移除") { whitelist.remove(path) }
+                            Button(L("移除","Remove")) { whitelist.remove(path) }
                                 .buttonStyle(.borderless)
                                 .font(.system(size: 10))
                         }
@@ -994,20 +1016,20 @@ struct SettingsView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Button("添加路径…") {
+                    Button(L("添加路径…","Add Path…")) {
                         let panel = NSOpenPanel()
                         panel.canChooseFiles = true
                         panel.canChooseDirectories = true
                         panel.allowsMultipleSelection = true
-                        panel.prompt = "保护"
-                        panel.message = "选择要保护的文件或目录"
+                        panel.prompt = L("保护","Protected")
+                        panel.message = L("选择要保护的文件或目录","Choose files or folders to protect")
                         if panel.runModal() == .OK {
                             for url in panel.urls { whitelist.add(url.path) }
                         }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    Button("打开配置文件") {
+                    Button(L("打开配置文件","Open Config File")) {
                         try? FileManager.default.createDirectory(at: whitelist.fileURL.deletingLastPathComponent(),
                                                                  withIntermediateDirectories: true)
                         if !FileManager.default.fileExists(atPath: whitelist.fileURL.path) {
@@ -1036,13 +1058,13 @@ struct SettingsView: View {
                         Text("Otter").font(.system(size: 16, weight: .bold))
                         KindTag(text: "v" + appVersion, color: .secondary)
                     }
-                    Text("原生 macOS 系统状态与清理工具 · 原生清理引擎")
+                    Text(L("原生 macOS 系统状态与清理工具 · 原生清理引擎","Native macOS system monitor and cleaner"))
                         .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                     HStack(spacing: 12) {
-                        Text("原生引擎").font(.system(size: 9.5)).foregroundStyle(.tertiary)
-                        Text("菜单栏常驻 · HUD 400×520").font(.system(size: 9.5)).foregroundStyle(.tertiary)
-                        Text("内存 footprint 目标 ≤25MB").font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text(L("原生引擎","Native engine")).font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text(L("菜单栏常驻 · HUD 400×520","Menu bar · HUD 400×520")).font(.system(size: 9.5)).foregroundStyle(.tertiary)
+                        Text(L("内存 footprint 目标 ≤25MB","Memory footprint target ≤25MB")).font(.system(size: 9.5)).foregroundStyle(.tertiary)
                     }
                 }
                 Spacer()

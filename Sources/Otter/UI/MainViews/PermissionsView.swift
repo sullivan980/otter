@@ -112,7 +112,7 @@ final class PermissionModel: ObservableObject {
         do {
             try process.run()
         } catch {
-            automation = .failed("无法运行 osascript：\(error.localizedDescription)")
+            automation = .failed(L("无法运行 osascript：\(error.localizedDescription)","Cannot run osascript: \(error.localizedDescription)"))
             return
         }
 
@@ -132,12 +132,12 @@ final class PermissionModel: ObservableObject {
                 status = .timeout
             } else if proc.terminationStatus == 0 {
                 status = .granted
-            } else if text.contains("-1743") || text.contains("not allowed") || text.contains("不允许") {
+            } else if text.contains("-1743") || text.contains("not allowed") || text.contains(L("不允许","Not allowed")) {
                 status = .denied
             } else {
                 status = .failed(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                 ? "退出码 \(proc.terminationStatus)"
-                                 : "退出码 \(proc.terminationStatus)：\(text.prefix(120))")
+                                 ? L("退出码 \(proc.terminationStatus)","Exit code \(proc.terminationStatus)")
+                                 : L("退出码 \(proc.terminationStatus)：\(text.prefix(120))","Exit code \(proc.terminationStatus): \(text.prefix(120))"))
             }
             DispatchQueue.main.async {
                 guard let self = self, self.isCurrent(generation) else { return }
@@ -179,33 +179,33 @@ struct PermissionSection: View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    SubHeader(text: "系统权限")
+                    SubHeader(text: L("系统权限","Permissions"))
                     Spacer()
                     if model.fullDisk.isChecking || model.automation.isChecking {
                         ProgressView().controlSize(.small)
                     }
-                    Button("重新检测全部") { model.checkAll() }
+                    Button(L("重新检测全部","Recheck All")) { model.checkAll() }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
-                Text("Otter 需要下列权限才能发挥完整能力。未开启时点右侧按钮跳到系统设置，开启后回到这里重新检测。自动化检测会弹出系统授权框，超时 \(Int(PermissionModel.timeout)) 秒按未开启处理。")
+                Text(L("Otter 需要下列权限才能发挥完整能力。未开启时点右侧按钮跳到系统设置，开启后回到这里重新检测。自动化检测会弹出系统授权框，超时 \(Int(PermissionModel.timeout)) 秒按未开启处理。","Otter needs these permissions for full functionality. Open System Settings with the button, then recheck here. Automation prompts for authorization; timeout is \(Int(PermissionModel.timeout))s."))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                permissionRow(title: "全磁盘访问",
-                              why: "统计废纸篓大小、读取受保护目录，清理与磁盘分析更准确",
+                permissionRow(title: L("全磁盘访问","Full Disk Access"),
+                              why: L("统计废纸篓大小、读取受保护目录，清理与磁盘分析更准确","More accurate Trash size, protected folders, cleaning and disk analysis"),
                               status: model.fullDisk,
-                              checkTitle: "检测",
+                              checkTitle: L("检测","Check"),
                               check: { model.checkFullDisk() },
                               openSettings: { PermissionModel.openFullDiskSettings() })
 
                 Divider()
 
-                permissionRow(title: "自动化（控制 System Events）",
-                              why: "执行需要系统事件代办的卸载/清理动作；首次检测会请求授权",
+                permissionRow(title: L("自动化（控制 System Events）","Automation (System Events)"),
+                              why: L("执行需要系统事件代办的卸载/清理动作；首次检测会请求授权","Required for automation-based actions; first check asks for authorization"),
                               status: model.automation,
-                              checkTitle: "检测自动化",
+                              checkTitle: L("检测自动化","Check Automation"),
                               check: { model.checkAutomation() },
                               openSettings: { PermissionModel.openAutomationSettings() })
             }
@@ -231,7 +231,7 @@ struct PermissionSection: View {
                 .controlSize(.small)
                 .disabled(status.isChecking)
             if !status.isGranted {
-                Button("打开设置") { openSettings() }
+                Button(L("打开设置","Open Settings")) { openSettings() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             }
@@ -242,28 +242,28 @@ struct PermissionSection: View {
     private func statusView(_ status: PermissionModel.Status) -> some View {
         switch status {
         case .granted:
-            Label("已开启", systemImage: "checkmark.circle.fill")
+            Label(L("已开启","Enabled"), systemImage: "checkmark.circle.fill")
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.green)
         case .denied:
-            Label("未开启", systemImage: "xmark.circle.fill")
+            Label(L("未开启","Disabled"), systemImage: "xmark.circle.fill")
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.orange)
         case .checking:
             HStack(spacing: 4) {
                 ProgressView().controlSize(.mini)
-                Text("检测中").font(.system(size: 10.5)).foregroundStyle(.secondary)
+                Text(L("检测中","Checking")).font(.system(size: 10.5)).foregroundStyle(.secondary)
             }
         case .timeout:
-            Label("超时", systemImage: "clock.badge.exclamationmark")
+            Label(L("超时","Timeout"), systemImage: "clock.badge.exclamationmark")
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.orange)
         case .unknown:
-            Label("未知", systemImage: "questionmark.circle")
+            Label(L("未知","Unknown"), systemImage: "questionmark.circle")
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.secondary)
         case .failed(let message):
-            Label("检测失败", systemImage: "exclamationmark.triangle.fill")
+            Label(L("检测失败","Check failed"), systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 10.5, weight: .medium))
                 .foregroundStyle(.red)
                 .help(message)
