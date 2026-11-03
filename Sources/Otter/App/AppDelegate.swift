@@ -54,6 +54,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let score = HealthCheckService.score(for: issues)
                 print("{\"mode\":\"health-score\",\"ok\":\(score <= 65 && score > 0),\"score\":\(score)}")
                 exit(0)
+            case "update-install-dmg":
+                let fm = FileManager.default
+                let dmgPath = "/tmp/Otter-0.30.2.dmg"
+                guard fm.fileExists(atPath: dmgPath) else {
+                    print("{\"mode\":\"update-install-dmg\",\"ok\":false,\"error\":\"missing dmg\"}")
+                    exit(0)
+                }
+                let root = "/tmp/otter-install-dmg"
+                try? fm.removeItem(atPath: root)
+                let target = root + "/Applications/Otter.app"
+                try? fm.createDirectory(atPath: target + "/Contents", withIntermediateDirectories: true)
+                let oldPlist: [String: Any] = ["CFBundleIdentifier": "com.ottermac.app", "CFBundleShortVersionString": "1.0"]
+                if let data = try? PropertyListSerialization.data(fromPropertyList: oldPlist, format: .xml, options: 0) {
+                    fm.createFile(atPath: target + "/Contents/Info.plist", contents: data)
+                }
+                let sleeper = Process()
+                sleeper.executableURL = URL(fileURLWithPath: "/bin/sleep")
+                sleeper.arguments = ["2"]
+                try? sleeper.run()
+                UpdateInstaller.testTargetApp = URL(fileURLWithPath: target)
+                UpdateInstaller.testWaitPID = sleeper.processIdentifier
+                UpdateInstaller.testLaunchAfter = false
+                defer {
+                    UpdateInstaller.testTargetApp = nil
+                    UpdateInstaller.testWaitPID = nil
+                    UpdateInstaller.testLaunchAfter = true
+                }
+                var installDone = false
+                var installError: String?
+                UpdateInstaller.installDownloaded(dmgURL: URL(fileURLWithPath: dmgPath),
+                                                  expectedVersion: "0.30.2") { result in
+                    if case .failure(let error) = result { installError = error.localizedDescription }
+                    installDone = true
+                }
+                let deadline = Date().addingTimeInterval(20)
+                while !installDone && Date() < deadline { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1)) }
+                sleeper.waitUntilExit()
+                func currentVersion() -> String {
+                    guard let data = fm.contents(atPath: target + "/Contents/Info.plist"),
+                          let obj = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any]
+                    else { return "?" }
+                    return obj["CFBundleShortVersionString"] as? String ?? "?"
+                }
+                let deadline2 = Date().addingTimeInterval(15)
+                while currentVersion() != "0.30.2" && Date() < deadline2 { RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1)) }
+                let ok = installDone && currentVersion() == "0.30.2" && installError == nil
+                print("{\"mode\":\"update-install-dmg\",\"ok\":\(ok),\"version\":\"\(currentVersion())\",\"error\":\"\(installError ?? "")\"}")
+                exit(0)
             case "update-install-fixture":
                 let fm = FileManager.default
                 let root = "/tmp/otter-install-fixture"

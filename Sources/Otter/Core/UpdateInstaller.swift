@@ -24,6 +24,10 @@ enum UpdateInstaller {
         }
     }
 
+    static var testTargetApp: URL?
+    static var testWaitPID: Int32?
+    static var testLaunchAfter = true
+
     /// 只允许从 GitHub 域名自动安装，避免任意地址替换应用。
     static func isTrustedDMG(_ url: URL) -> Bool {
         let host = url.host?.lowercased() ?? ""
@@ -33,8 +37,13 @@ enum UpdateInstaller {
 
     static func installDownloaded(dmgURL: URL, expectedVersion: String,
                                   completion: @escaping (Result<Void, Error>) -> Void) {
-        guard isTrustedDMG(dmgURL) else {
+        let isLocalFile = dmgURL.isFileURL
+        guard isLocalFile || isTrustedDMG(dmgURL) else {
             completion(.failure(InstallError.attachFailed("下载地址不在允许的 GitHub 域名内")))
+            return
+        }
+        guard FileManager.default.fileExists(atPath: dmgURL.path) else {
+            completion(.failure(InstallError.attachFailed("下载文件不存在：\(dmgURL.path)")))
             return
         }
         DispatchQueue.global(qos: .userInitiated).async {
@@ -71,7 +80,7 @@ enum UpdateInstaller {
                 return
             }
 
-            let target = Bundle.main.bundleURL
+            let target = testTargetApp ?? Bundle.main.bundleURL
             let parent = target.deletingLastPathComponent()
             guard FileManager.default.isWritableFile(atPath: parent.path) else {
                 DispatchQueue.main.async { completion(.failure(InstallError.noPermission)) }
@@ -86,8 +95,10 @@ enum UpdateInstaller {
                     throw InstallError.copyFailed(ditto?.output ?? "ditto 失败")
                 }
                 try replace(stagedApp: staged, targetApp: target,
-                            expectedVersion: expectedVersion, waitPID: ProcessInfo.processInfo.processIdentifier,
-                            launchAfter: true, completion: completion)
+                            expectedVersion: expectedVersion,
+                            waitPID: testWaitPID ?? ProcessInfo.processInfo.processIdentifier,
+                            launchAfter: testTargetApp == nil ? true : testLaunchAfter,
+                            completion: completion)
                 return
             } catch {
                 try? FileManager.default.removeItem(at: stagingRoot)
@@ -132,8 +143,11 @@ enum UpdateInstaller {
     // MARK: helpers
 
     private static func attach(_ dmg: URL) throws -> String {
-        guard let result = run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly"]), result.status == 0 else {
-            throw InstallError.attachFailed(run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly"])?.output ?? "未知错误")
+        guard let result = run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly"]) else {
+            throw InstallError.attachFailed("无法运行 hdiutil")
+        }
+        guard result.status == 0 else {
+            throw InstallError.attachFailed(result.output.trimmingCharacters(in: .whitespacesAndNewlines))
         }
         for line in result.output.split(separator: "\n") {
             if let range = line.range(of: "/Volumes/") {

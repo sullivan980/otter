@@ -991,7 +991,7 @@ struct SettingsView: View {
             switch result {
             case .success(let file):
                 ui.updateStatus = L("正在校验并安装…", "Verifying and installing…")
-                UpdateInstaller.installDownloaded(dmgURL: url, expectedVersion: info.version) { installResult in
+                UpdateInstaller.installDownloaded(dmgURL: file, expectedVersion: info.version) { installResult in
                     DispatchQueue.main.async {
                         ui.installingUpdate = false
                         switch installResult {
