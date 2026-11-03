@@ -65,6 +65,24 @@ if let idx = cliArgs.firstIndex(of: "--open"), idx + 1 < cliArgs.count {
     exit(0)
 }
 
+if let idx = cliArgs.firstIndex(of: "--check-update") {
+    let feed = idx + 1 < cliArgs.count ? cliArgs[idx + 1] : Prefs.shared.updateFeedURL
+    var done = false
+    UpdateService.check(feedURLString: feed) { result in
+        switch result {
+        case .upToDate(let current): print("up-to-date \(current)")
+        case .available(let info): print("available \(info.version) \(info.dmgURL?.absoluteString ?? "-")")
+        case .failure(let message): print("failure \(message)")
+        }
+        done = true
+    }
+    let deadline = Date().addingTimeInterval(25)
+    while !done && Date() < deadline {
+        RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+    }
+    exit(done ? 0 : 3)
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

@@ -16,7 +16,7 @@
 5. Publish release
 
 ## Otter 内开启自动更新
-设置 → 更新 → 填：
+0.28+ 已默认填好；旧版本在 设置 → 更新 填：
 
     https://api.github.com/repos/sullivan980/otter/releases/latest
 

@@ -25,8 +25,14 @@
 - 不自动安装、不静默执行。
 - 更新源地址保存在 Prefs.updateFeedURL。
 
-## 还没上传 GitHub 时
-先留空即可；上传后把地址填进设置。首次发布步骤：
+## 默认更新源
+新版本默认使用：
+https://api.github.com/repos/sullivan980/otter/releases/latest
+
+GitHub API 限流（共享出口 IP 常见）时会自动退回 releases/latest 页面解析，
+仍然能拿到版本号与 DMG 下载地址。
+
+## 首次发布步骤（已上传后）
 1. 新建仓库，上传源码；
 2. 打 tag（如 v0.14.0）并创建 Release；
 3. 把 Otter.dmg 作为 Release asset；

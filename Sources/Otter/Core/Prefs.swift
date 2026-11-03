@@ -79,7 +79,10 @@ final class Prefs {
     var alertCooldown: Double { get { d.object(forKey: Key.alertCooldown.rawValue) == nil ? 600 : d.double(forKey: Key.alertCooldown.rawValue) } set { d.set(newValue, forKey: Key.alertCooldown.rawValue) } }
 
     var updateFeedURL: String {
-        get { d.string(forKey: Key.updateFeedURL.rawValue) ?? "" }
+        get {
+            let v = d.string(forKey: Key.updateFeedURL.rawValue) ?? ""
+            return v.isEmpty ? "https://api.github.com/repos/sullivan980/otter/releases/latest" : v
+        }
         set { d.set(newValue, forKey: Key.updateFeedURL.rawValue) }
     }
 

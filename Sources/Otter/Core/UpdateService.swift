@@ -34,7 +34,8 @@ enum UpdateService {
     }
 
     static var currentVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        if let v = ProcessInfo.processInfo.environment["OTTER_UPDATE_CURRENT"], !v.isEmpty { return v }
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     }
 
     static func check(feedURLString: String, completion: @escaping (UpdateCheck) -> Void) {
@@ -48,6 +49,11 @@ enum UpdateService {
         URLSession.shared.dataTask(with: url) { data, response, error in
             if let error = error {
                 DispatchQueue.main.async { completion(.failure("检查更新失败：\(error.localizedDescription)")) }
+                return
+            }
+            if let http = response as? HTTPURLResponse, http.statusCode == 403,
+               url.host?.lowercased() == "api.github.com" {
+                checkGitHubPage(feedURLString: trimmed, completion: completion)
                 return
             }
             guard let data = data else {
@@ -65,6 +71,60 @@ enum UpdateService {
             } catch {
                 DispatchQueue.main.async { completion(.failure("更新源解析失败：\(error.localizedDescription)")) }
             }
+        }.resume()
+    }
+
+    /// GitHub API 限流时退回到 releases/latest 页面解析（不消耗 API 配额）。
+    private static func checkGitHubPage(feedURLString: String, completion: @escaping (UpdateCheck) -> Void) {
+        let parts = URL(string: feedURLString)?.pathComponents ?? []
+        // /repos/<owner>/<repo>/releases/latest
+        guard parts.count >= 5, parts[1] == "repos" else {
+            DispatchQueue.main.async { completion(.failure("GitHub API 限流，且无法解析仓库地址")) }
+            return
+        }
+        let owner = parts[2], repo = parts[3]
+        guard let page = URL(string: "https://github.com/\(owner)/\(repo)/releases/latest") else {
+            DispatchQueue.main.async { completion(.failure("GitHub API 限流")) }
+            return
+        }
+        URLSession.shared.dataTask(with: page) { data, response, error in
+            guard error == nil, data != nil else {
+                DispatchQueue.main.async { completion(.failure("检查更新失败：GitHub API 限流，页面也读取失败")) }
+                return
+            }
+            let finalURL = response?.url ?? page
+            let tag = finalURL.lastPathComponent
+            let version = tag.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+            guard !version.isEmpty, version != "latest" else {
+                DispatchQueue.main.async { completion(.failure("检查更新失败：无法识别最新版本")) }
+                return
+            }
+
+            func finish(_ dmg: URL?) {
+                let info = UpdateInfo(version: version, dmgURL: dmg, pageURL: finalURL, notes: "")
+                let current = currentVersion
+                DispatchQueue.main.async {
+                    if compare(info.version, current) > 0 { completion(.available(info)) }
+                    else { completion(.upToDate(current: current)) }
+                }
+            }
+
+            // 资产列表在 expanded_assets 片段里。
+            guard let assetsURL = URL(string: "https://github.com/\(owner)/\(repo)/releases/expanded_assets/\(tag)") else {
+                finish(nil)
+                return
+            }
+            URLSession.shared.dataTask(with: assetsURL) { adata, _, _ in
+                var dmg: URL?
+                if let adata = adata, let html = String(data: adata, encoding: .utf8),
+                   let range = html.range(of: "href=\"([^\"]*?/releases/download/[^\"]+?\\.dmg)\"", options: .regularExpression) {
+                    var href = String(html[range])
+                    href = href.replacingOccurrences(of: "href=\"", with: "")
+                    href = href.replacingOccurrences(of: "\"", with: "")
+                    dmg = URL(string: href.hasPrefix("http") ? href : "https://github.com" + href)
+                }
+                finish(dmg)
+            }.resume()
         }.resume()
     }
 
