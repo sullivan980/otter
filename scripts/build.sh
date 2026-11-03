@@ -24,9 +24,10 @@ mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources"
 
 SRC=$(find "$ROOT/Sources" -name "*.swift" | sort)
 # shellcheck disable=SC2086
-swiftc -O -sdk "$SDK" -target arm64-apple-macos13.0 -module-cache-path "$CACHE" \
+TARGET="${OTTER_TARGET:-$(uname -m)-apple-macos13.0}"
+swiftc -O -sdk "$SDK" -target "$TARGET" -module-cache-path "$CACHE" \
   -framework AppKit -framework SwiftUI -framework ServiceManagement -framework UserNotifications \
-  $SRC -o "$STAGE/Contents/MacOS/Otter"
+  "$SRC" -o "$STAGE/Contents/MacOS/Otter"
 
 cp "$ROOT/Resources/Info.plist" "$STAGE/Contents/Info.plist"
 cp "$ROOT/Resources/icon.icns" "$STAGE/Contents/Resources/icon.icns"

@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build DMG
+        run: ./scripts/make_dmg.sh
+
+      - name: Verify tag matches version
+        run: |
+          VER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/Otter.app/Contents/Info.plist)
+          TAG=${GITHUB_REF_NAME#v}
+          echo "version=$VER tag=$TAG"
+          test "$VER" = "$TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Otter.dmg
+          generate_release_notes: true
+
+      - name: Update update.json feed
+        run: |
+          python3 - <<'PY'
+          import json, os
+          tag = os.environ["GITHUB_REF_NAME"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          ver = tag.lstrip("v")
+          data = {
+              "version": ver,
+              "dmg": f"https://github.com/{repo}/releases/download/{tag}/Otter.dmg",
+              "page": f"https://github.com/{repo}/releases/tag/{tag}",
+              "notes": "自动发布",
+          }
+          with open("update.json", "w") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git diff --cached --quiet || git commit -m "chore: update feed ${GITHUB_REF_NAME} [skip ci]"
+          git push origin HEAD:master
