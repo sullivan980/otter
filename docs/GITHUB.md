@@ -15,6 +15,13 @@
 4. 上传本机 `otter2/Otter.dmg` 作为 asset
 5. Publish release
 
+## 备用更新源（不走 GitHub API，不限流）
+仓库根目录的 `update.json` 可直接作为自定义 JSON 更新源：
+
+    https://raw.githubusercontent.com/sullivan980/otter/master/update.json
+
+每次发版改 version / dmg / page / notes 即可。
+
 ## Otter 内开启自动更新
 0.28+ 已默认填好；旧版本在 设置 → 更新 填：
 
