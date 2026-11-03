@@ -1,6 +1,6 @@
 {
-  "version": "0.30.0",
-  "dmg": "https://github.com/sullivan980/otter/releases/download/v0.30.0/Otter.dmg",
-  "page": "https://github.com/sullivan980/otter/releases/tag/v0.30.0",
+  "version": "0.30.1",
+  "dmg": "https://github.com/sullivan980/otter/releases/download/v0.30.1/Otter.dmg",
+  "page": "https://github.com/sullivan980/otter/releases/tag/v0.30.1",
   "notes": "自动发布"
 }
