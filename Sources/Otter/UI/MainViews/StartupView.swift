@@ -52,8 +52,9 @@ struct StartupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "启动项",
-                          subtitle: "查看 LaunchAgents / LaunchDaemons；用户项可直接禁用（会同步 launchctl），系统项需管理员，当前只读。") {
+            SectionHeader(title: L("启动项", "Startup"),
+                          subtitle: L("查看 LaunchAgents / LaunchDaemons；用户项可直接禁用（会同步 launchctl），系统项需管理员，当前只读。",
+                                      "Inspect LaunchAgents / LaunchDaemons. User items can be disabled (syncs launchctl); system items require admin and are read-only.")) {
                 Button(model.isScanning ? "扫描中…" : "刷新") { model.scan() }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isScanning)

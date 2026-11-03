@@ -47,18 +47,18 @@ final class NativeCleanService: CleanServicing {
         let home = NSHomeDirectory()
         func u(_ p: String) -> URL { URL(fileURLWithPath: p.replacingOccurrences(of: "~", with: home)) }
         let builtins = [
-            Spec(id: "user_caches", title: "用户缓存", roots: [u("~/Library/Caches")], children: true),
-            Spec(id: "user_logs", title: "用户日志", roots: [u("~/Library/Logs")], children: true),
-            Spec(id: "trash", title: "废纸篓", roots: [u("~/.Trash")], children: true),
-            Spec(id: "xcode", title: "Xcode 缓存", roots: [
+            Spec(id: "user_caches", title: L("用户缓存", "User Caches"), roots: [u("~/Library/Caches")], children: true),
+            Spec(id: "user_logs", title: L("用户日志", "User Logs"), roots: [u("~/Library/Logs")], children: true),
+            Spec(id: "trash", title: L("废纸篓", "Trash"), roots: [u("~/.Trash")], children: true),
+            Spec(id: "xcode", title: L("Xcode 缓存", "Xcode Caches"), roots: [
                 u("~/Library/Developer/Xcode/DerivedData"),
                 u("~/Library/Developer/CoreSimulator/Caches"),
             ], children: false),
-            Spec(id: "dev_caches", title: "开发缓存", roots: [
+            Spec(id: "dev_caches", title: L("开发缓存", "Dev Caches"), roots: [
                 u("~/.npm/_cacache"),
                 u("~/.gradle/caches"),
             ], children: false),
-            Spec(id: "system_caches", title: "系统缓存（需授权）",
+            Spec(id: "system_caches", title: L("系统缓存（需授权）", "System Caches (Admin)"),
                  roots: [URL(fileURLWithPath: "/Library/Caches")], children: true, requiresRoot: true),
         ]
         return builtins + pluginSpecs

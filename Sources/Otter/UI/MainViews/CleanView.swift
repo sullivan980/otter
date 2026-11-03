@@ -41,10 +41,10 @@ final class CleanViewModel: ObservableObject {
 
     var scanButtonTitle: String {
         switch phase {
-        case .scanning: return "扫描中…"
-        case .running: return "执行中…"
-        case .previewed, .done, .failed: return "重新扫描"
-        case .idle: return "扫描可清理项"
+        case .scanning: return L("扫描中…", "Scanning…")
+        case .running: return L("执行中…", "Running…")
+        case .previewed, .done, .failed: return L("重新扫描", "Rescan")
+        case .idle: return L("扫描可清理项", "Scan for Cleanables")
         }
     }
 
@@ -321,8 +321,9 @@ struct CleanView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "清理",
-                          subtitle: "扫描缓存、日志与临时文件；真实清理前会二次确认，可随时停止。") {
+            SectionHeader(title: L("清理", "Clean"),
+                          subtitle: L("扫描缓存、日志与临时文件；真实清理前会二次确认，可随时停止。",
+                                      "Scan caches, logs and temporary files. Cleaning asks for confirmation and can be stopped anytime.")) {
                 HStack(spacing: 8) {
                     if model.isBusy {
                         ProgressView().controlSize(.small)
@@ -351,8 +352,8 @@ struct CleanView: View {
         }
         .onAppear { model.autoScanIfRequested() }
         .alert("确认清理？", isPresented: $ui.confirmRun) {
-            Button("取消", role: .cancel) {}
-            Button("清理", role: .destructive) { model.run() }
+            Button(L("取消", "Cancel"), role: .cancel) {}
+            Button(L("清理", "Clean"), role: .destructive) { model.run() }
         } message: {
             Text(model.confirmMessage)
         }
@@ -364,9 +365,10 @@ struct CleanView: View {
         case .idle:
             VStack(spacing: 10) {
                 EmptyStateView(icon: "sparkles",
-                               title: "点击扫描，预览可清理项",
-                               message: "扫描是只读预览，不会立刻删除任何文件；确认计划后才会执行清理。",
-                               actionTitle: "扫描可清理项") { model.scan() }
+                               title: L("点击扫描，预览可清理项", "Scan to preview cleanable items"),
+                               message: L("扫描是只读预览，不会立刻删除任何文件；确认计划后才会执行清理。",
+               "Scanning is read-only and deletes nothing. Cleaning starts only after you confirm."),
+                               actionTitle: L("扫描可清理项", "Scan for Cleanables")) { model.scan() }
                 if let summary = lastCleanSummary {
                     Text(summary)
                         .font(.system(size: 10.5))
@@ -380,7 +382,7 @@ struct CleanView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("正在扫描…").font(.system(size: 12, weight: .semibold))
+                        Text(L("正在扫描…", "Scanning…")).font(.system(size: 12, weight: .semibold))
                         Spacer()
                         Text(model.statusLine)
                             .font(.system(size: 10.5, design: .monospaced))
@@ -400,9 +402,9 @@ struct CleanView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("正在清理…").font(.system(size: 12, weight: .semibold))
+                        Text(L("正在清理…", "Cleaning…")).font(.system(size: 12, weight: .semibold))
                         Spacer()
-                        Button("停止") { model.cancel() }
+                        Button(L("停止", "Stop")) { model.cancel() }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                     }
@@ -416,9 +418,9 @@ struct CleanView: View {
 
         case .failed:
             EmptyStateView(icon: "exclamationmark.triangle",
-                           title: "操作未完成",
-                           message: model.errorText ?? "请重试。",
-                           actionTitle: "重新扫描") { model.scan() }
+                           title: L("操作未完成", "Operation Not Completed"),
+                           message: model.errorText ?? L("请重试。", "Please try again."),
+                           actionTitle: L("重新扫描", "Rescan")) { model.scan() }
                 .frame(minHeight: 280)
         }
     }
@@ -428,9 +430,10 @@ struct CleanView: View {
         let at = Prefs.shared.lastCleanAt
         guard at > 0 else { return nil }
         let fmt = DateFormatter()
-        fmt.dateFormat = "M月d日 HH:mm"
+        fmt.locale = Locale(identifier: L10n.isEnglish ? "en_US" : "zh_CN")
+        fmt.dateFormat = L10n.isEnglish ? "MMM d, HH:mm" : "M月d日 HH:mm"
         let when = fmt.string(from: Date(timeIntervalSince1970: at))
-        return "上次清理：\(when) · 处理 \(Fmt.bytes(Double(Prefs.shared.lastCleanBytes)))"
+        return L("上次清理：", "Last clean: ") + "\(when) · " + L("处理 ", "") + Fmt.bytes(Double(Prefs.shared.lastCleanBytes))
     }
 
     private var previewContent: some View {
@@ -439,8 +442,9 @@ struct CleanView: View {
 
             if let plan = model.plan, plan.categories.isEmpty {
                 EmptyStateView(icon: "leaf",
-                               title: "没有可清理的项目",
-                               message: "扫描已完成，当前系统没有可清理的缓存、日志或临时文件。稍后可重新扫描。",
+                               title: L("没有可清理的项目", "Nothing to Clean"),
+                               message: L("扫描已完成，当前系统没有可清理的缓存、日志或临时文件。稍后可重新扫描。",
+               "Scan finished. No caches, logs or temporary files are currently cleanable."),
                                actionTitle: "重新扫描") { model.scan() }
                     .frame(minHeight: 240)
             } else if let plan = model.plan {
@@ -456,7 +460,7 @@ struct CleanView: View {
         PanelCard {
             HStack(alignment: .center, spacing: 18) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("预计可释放")
+                    Text(L("预计可释放", "Reclaimable"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     Text(Fmt.bytes(Double(model.displayBytes)))
                         .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -468,7 +472,7 @@ struct CleanView: View {
                 StatChip(title: "条目", value: "\(model.displayItemCount)", tint: .primary)
                 StatChip(title: "已勾选", value: "\(model.selectedCount()) 项", tint: .primary)
                 Spacer()
-                Button(model.allSelected ? "取消全选" : "全选") { model.toggleAll() }
+                Button(model.allSelected ? L("取消全选", "Deselect All") : L("全选", "Select All")) { model.toggleAll() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             }
@@ -513,12 +517,12 @@ struct CleanView: View {
                 .disabled(category.items.isEmpty)
 
                 Text(category.title).font(.system(size: 12, weight: .medium))
-                Text("\(category.items.count) 项")
+                Text("\(category.items.count) \(L("项", "items"))")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                 Spacer()
                 if category.items.isEmpty {
-                    Text("无可清理")
+                    Text(L("无可清理", "Nothing to clean"))
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                 } else {
                     Text(Fmt.bytes(Double(category.bytes)))
@@ -580,7 +584,7 @@ struct CleanView: View {
                 HStack(spacing: 5) {
                     Image(systemName: model.showConsole ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .bold))
-                    Text("扫描日志（\(model.lines.count) 行）").font(.system(size: 11))
+                    Text(L("扫描日志", "Scan Log") + "（\(model.lines.count)）").font(.system(size: 11))
                 }
                 .foregroundStyle(.secondary)
             }
@@ -605,9 +609,9 @@ struct CleanView: View {
                             height: 220, title: "清理结果")
             }
             HStack(spacing: 10) {
-                Button("完成") { model.finish() }
+                Button(L("完成", "Done")) { model.finish() }
                     .buttonStyle(.bordered)
-                Button("再次扫描") { model.scan() }
+                Button(L("再次扫描", "Scan Again")) { model.scan() }
                     .buttonStyle(.borderedProminent)
                 Spacer()
             }
@@ -618,14 +622,14 @@ struct CleanView: View {
     private var bottomBar: some View {
         if model.phase == .previewed, let plan = model.plan, !plan.categories.isEmpty {
             BottomBar {
-                Text("已选 \(model.selectedCount()) 项 · 预计释放 \(Fmt.bytes(Double(model.selectedBytes())))")
+                Text("\(L("已选", "Selected")) \(model.selectedCount()) \(L("项", "items")) · \(L("预计释放", "Reclaim")) \(Fmt.bytes(Double(model.selectedBytes())))")
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("原生引擎 · 按勾选执行")
+                Text(L("原生引擎 · 按勾选执行", "Native engine · selected items only"))
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
-                Button("清理…") { ui.confirmRun = true }
+                Button(L("清理…", "Clean…")) { ui.confirmRun = true }
                     .buttonStyle(.borderedProminent)
                     .tint(.red)
                     .disabled(model.isBusy)

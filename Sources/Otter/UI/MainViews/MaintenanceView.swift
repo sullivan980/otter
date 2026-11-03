@@ -51,8 +51,9 @@ struct MaintenanceView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "维护",
-                          subtitle: "系统状态只读诊断；维护任务仅提供预览说明，不会执行 DNS / Spotlight 等有风险操作。") {
+            SectionHeader(title: L("维护", "Maintenance"),
+                          subtitle: L("系统状态只读诊断；维护任务仅提供预览说明，不会执行 DNS / Spotlight 等有风险操作。",
+                                      "Read-only system diagnostics. Maintenance tasks are previews; risky DNS / Spotlight actions are not executed.")) {
                 Button(model.isRefreshing ? "检测中…" : "重新检测") { model.refresh() }
                     .buttonStyle(.borderedProminent)
                     .disabled(model.isRefreshing)

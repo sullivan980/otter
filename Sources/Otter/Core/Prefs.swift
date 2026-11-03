@@ -18,7 +18,7 @@ final class Prefs {
         case notificationsEnabled
         case appTheme           // A | B | C | D | E（默认 E 水波玻璃）
         case updateFeedURL      // 更新源（https，GitHub API 或自定义 JSON）
-        case alertsEnabled, alertCPU, alertMem, alertDisk, alertDuration, alertCooldown
+        case alertsEnabled, alertCPU, alertMem, alertDisk, alertDuration, alertCooldown, language
         case lowDiskReminderEnabled, cleanReminderDays, lastLowDiskReminderAt, lastCleanReminderAt
         case lastCleanAt        // 上次清理时间（Unix 秒）
         case lastCleanBytes     // 上次清理释放字节数
@@ -67,6 +67,9 @@ final class Prefs {
     var alertCPU: Double { get { d.object(forKey: Key.alertCPU.rawValue) == nil ? 90 : d.double(forKey: Key.alertCPU.rawValue) } set { d.set(newValue, forKey: Key.alertCPU.rawValue) } }
     var alertMem: Double { get { d.object(forKey: Key.alertMem.rawValue) == nil ? 90 : d.double(forKey: Key.alertMem.rawValue) } set { d.set(newValue, forKey: Key.alertMem.rawValue) } }
     var alertDisk: Double { get { d.object(forKey: Key.alertDisk.rawValue) == nil ? 90 : d.double(forKey: Key.alertDisk.rawValue) } set { d.set(newValue, forKey: Key.alertDisk.rawValue) } }
+    /// system | zh | en
+    var language: String { get { d.string(forKey: Key.language.rawValue) ?? "system" } set { d.set(newValue, forKey: Key.language.rawValue) } }
+
     var alertDuration: Double { get { d.object(forKey: Key.alertDuration.rawValue) == nil ? 30 : d.double(forKey: Key.alertDuration.rawValue) } set { d.set(newValue, forKey: Key.alertDuration.rawValue) } }
     var lowDiskReminderEnabled: Bool { get { bool(.lowDiskReminderEnabled, default: true) } set { d.set(newValue, forKey: Key.lowDiskReminderEnabled.rawValue) } }
     var cleanReminderDays: Int { get { d.object(forKey: Key.cleanReminderDays.rawValue) == nil ? 7 : d.integer(forKey: Key.cleanReminderDays.rawValue) } set { d.set(newValue, forKey: Key.cleanReminderDays.rawValue) } }

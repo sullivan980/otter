@@ -126,7 +126,7 @@ struct MainSidebar: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text("Otter").font(.system(size: 15, weight: .bold))
-                Text("系统守护者").font(.system(size: 10)).foregroundStyle(.secondary)
+                Text(L("系统守护者", "System Guardian")).font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
@@ -163,19 +163,19 @@ struct MainSidebar: View {
                 Circle()
                     .fill(m.isReady ? Color.green : Color.secondary)
                     .frame(width: 5, height: 5)
-                Text("实时状态").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                Text(L("实时状态", "Live Status")).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
-                Text(m.isReady ? "运行中" : "启动中")
+                Text(m.isReady ? L("运行中", "Running") : L("启动中", "Starting"))
                     .font(.system(size: 9.5))
                     .foregroundStyle(.tertiary)
             }
             SidebarMetricRow(label: "CPU", value: Fmt.percent(m.cpuPercent),
                              fraction: m.cpuPercent / 100,
                              tint: m.cpuPercent >= 85 ? .red : (m.cpuPercent >= 60 ? .orange : .green))
-            SidebarMetricRow(label: "内存", value: Fmt.percent(m.memUsedPercent),
+            SidebarMetricRow(label: L("内存", "Memory"), value: Fmt.percent(m.memUsedPercent),
                              fraction: m.memUsedPercent / 100,
                              tint: m.memUsedPercent >= 85 ? .red : (m.memUsedPercent >= 60 ? .orange : .blue))
-            SidebarMetricRow(label: "磁盘", value: Fmt.percent(m.diskUsedPercent),
+            SidebarMetricRow(label: L("磁盘", "Disk"), value: Fmt.percent(m.diskUsedPercent),
                              fraction: m.diskUsedPercent / 100, tint: .teal)
             HStack(spacing: 10) {
                 HStack(spacing: 3) {

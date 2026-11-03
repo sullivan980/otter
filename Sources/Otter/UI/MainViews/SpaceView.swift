@@ -98,8 +98,9 @@ struct SpaceView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "空间",
-                          subtitle: "安装包与项目构建产物清理；只读扫描，删除前二次确认，白名单路径自动跳过。") {
+            SectionHeader(title: L("空间", "Space"),
+                          subtitle: L("安装包与项目构建产物清理；只读扫描，删除前二次确认，白名单路径自动跳过。",
+                                      "Clean installers and project build artifacts. Read-only scan, confirmation before delete, whitelist paths skipped.")) {
                 HStack(spacing: 8) {
                     Picker("", selection: $model.mode) {
                         ForEach(SpaceScanMode.allCases) { mode in

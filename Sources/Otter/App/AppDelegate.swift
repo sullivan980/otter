@@ -31,6 +31,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "i18n":
+                let was = ProcessInfo.processInfo.environment["OTTER_LANG"]
+                setenv("OTTER_LANG", "en", 1)
+                let en1 = L("清理", "Clean")
+                let en2 = L("设置", "Settings")
+                setenv("OTTER_LANG", "zh", 1)
+                let zh1 = L("清理", "Clean")
+                if let was = was { setenv("OTTER_LANG", was, 1) } else { unsetenv("OTTER_LANG") }
+                print("{\"mode\":\"i18n\",\"ok\":\(en1 == "Clean" && en2 == "Settings" && zh1 == "清理")}")
+                exit(0)
             case "url-route":
                 let a = OtterURLRouter.section(for: URL(string: "otter://clean")!) == "clean"
                 let b = OtterURLRouter.section(for: URL(string: "otter://settings")!) == "settings"

@@ -314,8 +314,9 @@ struct UninstallView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "卸载",
-                          subtitle: "彻底移除应用本体与残留文件；默认移入废纸篓，可随时还原。") {
+            SectionHeader(title: L("卸载", "Uninstall"),
+                          subtitle: L("彻底移除应用本体与残留文件；默认移入废纸篓，可随时还原。",
+                                      "Remove apps and leftovers. Items go to Trash by default and can be restored.")) {
                 HStack(spacing: 8) {
                     if model.isLoadingApps || model.isScanning || model.isTrashing {
                         ProgressView().controlSize(.small)

@@ -84,12 +84,12 @@ final class StatusBarController: NSObject {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        addItem(menu, "打开面板", #selector(openHUD), "")
-        addItem(menu, "主界面", #selector(openMain), "")
-        addItem(menu, "设置", #selector(openSettings), "")
+        addItem(menu, L("打开面板", "Open Panel"), #selector(openHUD), "")
+        addItem(menu, L("主界面", "Main Window"), #selector(openMain), "")
+        addItem(menu, L("设置", "Settings"), #selector(openSettings), "")
         menu.addItem(.separator())
 
-        let pause = NSMenuItem(title: state.isPaused ? "恢复采集" : "暂停采集",
+        let pause = NSMenuItem(title: state.isPaused ? L("恢复采集", "Resume Sampling") : L("暂停采集", "Pause Sampling"),
                                action: #selector(togglePause),
                                keyEquivalent: "")
         pause.target = self
@@ -97,12 +97,12 @@ final class StatusBarController: NSObject {
         menu.addItem(pause)
 
         menu.addItem(.separator())
-        addItem(menu, "欢迎引导…", #selector(openOnboarding), "")
-        addItem(menu, "检查更新…", #selector(checkUpdates), "")
-        addItem(menu, "关于 Otter", #selector(openAbout), "")
+        addItem(menu, L("欢迎引导…", "Welcome…"), #selector(openOnboarding), "")
+        addItem(menu, L("检查更新…", "Check for Updates…"), #selector(checkUpdates), "")
+        addItem(menu, L("关于 Otter", "About Otter"), #selector(openAbout), "")
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "退出 Otter", action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: L("退出 Otter", "Quit Otter"), action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 

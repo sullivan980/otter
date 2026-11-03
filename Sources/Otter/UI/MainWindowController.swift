@@ -8,13 +8,13 @@ enum MainSection: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .clean: return "清理"
-        case .uninstall: return "卸载"
-        case .space: return "空间"
-        case .startup: return "启动项"
-        case .maintenance: return "维护"
-        case .disk: return "磁盘"
-        case .settings: return "设置"
+        case .clean: return L("清理", "Clean")
+        case .uninstall: return L("卸载", "Uninstall")
+        case .space: return L("空间", "Space")
+        case .startup: return L("启动项", "Startup")
+        case .maintenance: return L("维护", "Maintenance")
+        case .disk: return L("磁盘", "Disk")
+        case .settings: return L("设置", "Settings")
         }
     }
     var icon: String {

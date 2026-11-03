@@ -156,6 +156,7 @@ final class SettingsUIState: ObservableObject {
     @Published var alertMem = Prefs.shared.alertMem
     @Published var alertDisk = Prefs.shared.alertDisk
     @Published var alertDuration = Prefs.shared.alertDuration
+    @Published var language = Prefs.shared.language
     @Published var lowDiskReminder = Prefs.shared.lowDiskReminderEnabled
     @Published var cleanReminderDays = Prefs.shared.cleanReminderDays
     @Published var trashCount = 0
@@ -179,8 +180,9 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "设置",
-                          subtitle: "菜单栏显示、登录自启、通知、系统权限与 HUD 插件。修改即时生效并持久化。")
+            SectionHeader(title: L("设置", "Settings"),
+                          subtitle: L("菜单栏显示、登录自启、通知、系统权限与 HUD 插件。修改即时生效并持久化。",
+                                      "Menu bar, login, notifications, permissions and HUD plugins. Changes apply immediately."))
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     themeSection
@@ -219,7 +221,7 @@ struct SettingsView: View {
     private var themeSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
-                SubHeader(text: "主题", trailing: "默认 水波玻璃")
+                SubHeader(text: L("主题", "Theme"), trailing: L("默认 水波玻璃", "Default: Water Glass"))
 
                 ForEach(themeStore.themes) { item in
                     themeRow(item)
@@ -303,7 +305,24 @@ struct SettingsView: View {
     private var generalSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
-                SubHeader(text: "通用")
+                SubHeader(text: L("通用", "General"))
+
+                settingRow(title: L("语言", "Language"),
+                           desc: L("切换后需要重启 Otter 生效。", "Restart Otter to apply.")) {
+                    Picker("", selection: $ui.language) {
+                        Text(L("跟随系统", "System")).tag("system")
+                        Text("中文").tag("zh")
+                        Text("English").tag("en")
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 230)
+                    .onChange(of: ui.language) { value in
+                        Prefs.shared.language = value
+                        ui.toast = L("语言已保存，重启 Otter 后生效。", "Language saved. Restart Otter to apply.")
+                    }
+                }
+
+                Divider()
 
                 settingRow(title: "登录时自动启动",
                            desc: "开机后常驻菜单栏，指标随系统启动。") {
@@ -444,7 +463,7 @@ struct SettingsView: View {
     private var menuBarSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
-                SubHeader(text: "菜单栏显示")
+                SubHeader(text: L("菜单栏显示", "Menu Bar"))
                 Text("只保留自定义：勾选指标、调整顺序、选择样式。上传 / 下载默认不勾选，需要时打开即可；獭图标默认不显示。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -631,7 +650,7 @@ struct SettingsView: View {
     private var trashSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "Otter 回收站", trailing: "\(ui.trashCount) 项 · \(Fmt.bytes(Double(ui.trashBytes)))")
+                SubHeader(text: L("Otter 回收站", "Otter Trash"), trailing: "\(ui.trashCount) \(L("项", "items")) · \(Fmt.bytes(Double(ui.trashBytes)))")
                 Text("清理的项目先移到这里（可恢复）；清空后才真正释放磁盘。系统缓存需要管理员，不进回收站。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -683,7 +702,7 @@ struct SettingsView: View {
     private var cleanRulesSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "清理规则插件", trailing: "\(cleanRules.rules.count) 条")
+                SubHeader(text: L("清理规则插件", "Clean Rule Plugins"), trailing: "\(cleanRules.rules.count)")
                 Text("自定义清理分类：JSON 放 ~/Library/Application Support/Otter/cleanrules/，路径必须在主目录下；扫描后作为额外分类出现，白名单依然生效。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -730,7 +749,7 @@ struct SettingsView: View {
     private var remindersSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "提醒")
+                SubHeader(text: L("提醒", "Reminders"))
                 HStack {
                     Toggle("低磁盘提醒", isOn: $ui.lowDiskReminder)
                         .toggleStyle(.switch)
@@ -761,7 +780,7 @@ struct SettingsView: View {
     private var alertsSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "阈值告警", trailing: "默认关闭")
+                SubHeader(text: L("阈值告警", "Threshold Alerts"), trailing: L("默认关闭", "Off by default"))
                 Text("指标连续超过阈值的时间达到设定值后发一次系统通知；冷却期内不重复。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -815,7 +834,7 @@ struct SettingsView: View {
     private var diagnosticsSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "诊断与日志", trailing: "不上传任何数据")
+                SubHeader(text: L("诊断与日志", "Diagnostics"), trailing: L("不上传任何数据", "No data uploaded"))
                 Text("导出内容：版本、系统/硬件、实时指标、偏好、插件加载错误、最近 100 行操作日志、Otter 崩溃报告列表。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -853,7 +872,7 @@ struct SettingsView: View {
     private var updateSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "更新", trailing: "当前 v\(appVersion)")
+                SubHeader(text: L("更新", "Updates"), trailing: "\(L("当前", "Current")) v\(appVersion)")
                 Text("填 GitHub Releases API 或自定义 JSON 地址（https）。只检查与下载 DMG，不自动安装。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -947,7 +966,7 @@ struct SettingsView: View {
     private var whitelistSection: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 10) {
-                SubHeader(text: "清理保护", trailing: "\(whitelist.paths.count) 条")
+                SubHeader(text: L("清理保护", "Clean Protection"), trailing: "\(whitelist.paths.count)")
                 Text("这些路径不会被安装包 / 项目产物清理删除；适合放正在开发的项目或重要目录。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)

@@ -97,7 +97,7 @@ struct HUDView: View {
             Image(systemName: "water.waves")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-            Text("系统状态")
+            Text(L("系统状态", "System Status"))
                 .font(.system(size: 13, weight: .semibold))
             HStack(spacing: 5) {
                 HUDDot(on: !state.isPaused && m.isReady)
@@ -116,8 +116,8 @@ struct HUDView: View {
     }
 
     private var statusText: String {
-        if state.isPaused { return "已暂停" }
-        return m.isReady ? "实时监控中" : "读取中…"
+        if state.isPaused { return L("已暂停", "Paused") }
+        return m.isReady ? L("实时监控中", "Live") : L("读取中…", "Loading…")
     }
 
     // MARK: - 内置布局（manifest 缺失时回退）
@@ -134,7 +134,7 @@ struct HUDView: View {
                         percentCard(.disk)
                     }
                     networkCard
-                    procsCard(title: "占用最高进程", trailing: "按 CPU")
+                    procsCard(title: L("占用最高进程", "Top Processes"), trailing: L("按 CPU", "By CPU"))
                 }
             }
             .padding(.bottom, 2)
@@ -212,7 +212,7 @@ struct HUDView: View {
         case .bar(let kind): barCard(kind)
         case .ring(let kind): ringCard(kind)
         case .textGroup(let kinds): textGroupCard(kinds)
-        case .procs(let label): procsCard(title: label ?? "占用最高进程", trailing: "按 CPU")
+        case .procs(let label): procsCard(title: label ?? L("占用最高进程", "Top Processes"), trailing: L("按 CPU", "By CPU"))
         case .clock: clockCard
         case .uptime: uptimeCard
         case .divider: Divider().padding(.vertical, 1)
@@ -280,7 +280,7 @@ struct HUDView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     stackLabel("CPU")
-                    Text(m.coreCount > 0 ? "\(m.coreCount) 核 · 已开机 \(Fmt.uptime(m.uptime))" : "读取中…")
+                    Text(m.coreCount > 0 ? "\(m.coreCount) \(L("核", "cores")) · \(L("已开机", "Uptime")) \(Fmt.uptime(m.uptime))" : L("读取中…", "Loading…"))
                         .font(.system(size: 8.5))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
@@ -302,7 +302,7 @@ struct HUDView: View {
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                          alignment: .leading, spacing: 3) {
             if cores.isEmpty {
-                Text("每核读取中…")
+                Text(L("每核读取中…", "Reading cores…"))
                     .font(.system(size: 8))
                     .foregroundStyle(.tertiary)
             } else {
@@ -336,7 +336,7 @@ struct HUDView: View {
         HUDCard(padding: 9) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    stackLabel("内存")
+                    stackLabel(L("内存", "Memory"))
                     Spacer(minLength: 2)
                     Text(MetricKind.mem.display(m))
                         .font(numFont(19))
@@ -359,7 +359,7 @@ struct HUDView: View {
         HUDCard(padding: 9) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    stackLabel("磁盘")
+                    stackLabel(L("磁盘", "Disk"))
                     Spacer(minLength: 2)
                     Text(MetricKind.disk.display(m))
                         .font(numFont(19))
@@ -390,8 +390,8 @@ struct HUDView: View {
         HUDCard(padding: 9) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    stackLabel("网络")
-                    Text("实时速率").font(.system(size: 8.5)).foregroundStyle(.tertiary)
+                    stackLabel(L("网络", "Network"))
+                    Text(L("实时速率", "Live rate")).font(.system(size: 8.5)).foregroundStyle(.tertiary)
                     Spacer()
                 }
                 netRow(.up, tint: netTint)
@@ -420,14 +420,14 @@ struct HUDView: View {
         HUDCard(padding: 7) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
-                    stackLabel("TOP 进程")
+                    stackLabel(L("TOP 进程", "Top Processes"))
                     Spacer()
-                    Text("按 CPU")
+                    Text(L("按 CPU", "By CPU"))
                         .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
                 }
                 if m.topProcesses.isEmpty {
-                    Text("暂无进程数据，采集中…")
+                    Text(L("暂无进程数据，采集中…", "No process data yet…"))
                         .font(.system(size: 9))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, minHeight: 30)
@@ -462,9 +462,9 @@ struct HUDView: View {
 
     private var stackActions: some View {
         HStack(spacing: 8) {
-            stackButton("清理", primary: false) { onAction?("clean") }
-            stackButton("卸载", primary: false) { onAction?("uninstall") }
-            stackButton("主界面", primary: true) { onAction?(nil) }
+            stackButton(L("清理", "Clean"), primary: false) { onAction?("clean") }
+            stackButton(L("卸载", "Uninstall"), primary: false) { onAction?("uninstall") }
+            stackButton(L("主界面", "Main"), primary: true) { onAction?(nil) }
         }
     }
 
@@ -528,7 +528,7 @@ struct HUDView: View {
                     .frame(width: 7, height: 4 + 14 * f)
             }
             Spacer(minLength: 4)
-            Text("每核")
+            Text(L("每核", "Cores"))
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
         }
@@ -671,7 +671,7 @@ struct HUDView: View {
                         HUDSkeleton(height: 12)
                     }
                 } else if m.topProcesses.isEmpty {
-                    Text("暂无进程数据，采集中…")
+                    Text(L("暂无进程数据，采集中…", "No process data yet…"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, minHeight: 44)
@@ -712,18 +712,18 @@ struct HUDView: View {
 
     private func confirmKill(_ p: TopProcess, force: Bool) {
         let alert = NSAlert()
-        alert.messageText = force ? "强制退出 (p.name)？" : "退出 (p.name)？"
+        alert.messageText = force ? L("强制退出", "Force quit") + " \(p.name)?" : L("退出", "Quit") + " \(p.name)?"
         alert.informativeText = force
-            ? "会立即结束进程（SIGKILL），未保存的数据可能丢失。"
-            : "会请求进程正常退出（SIGTERM）。"
+            ? L("会立即结束进程（SIGKILL），未保存的数据可能丢失。", "Sends SIGKILL immediately; unsaved data may be lost.")
+            : L("会请求进程正常退出（SIGTERM）。", "Asks the process to quit normally (SIGTERM).")
         alert.alertStyle = force ? .critical : .warning
-        alert.addButton(withTitle: force ? "强制退出" : "退出")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: force ? L("强制退出", "Force Quit") : L("退出", "Quit"))
+        alert.addButton(withTitle: L("取消", "Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         if case .failure(let error) = ProcessService.terminate(pid: p.id, force: force) {
-            OperationResultCenter.shared.post(kind: .error, title: "退出失败", message: error.localizedDescription)
+            OperationResultCenter.shared.post(kind: .error, title: L("退出失败", "Failed to Quit"), message: error.localizedDescription)
         } else {
-            OperationResultCenter.shared.post(kind: .success, title: "已请求退出", message: p.name)
+            OperationResultCenter.shared.post(kind: .success, title: L("已请求退出", "Quit Requested"), message: p.name)
         }
     }
 
@@ -735,7 +735,7 @@ struct HUDView: View {
                 Image(systemName: "clock")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
-                Text("当前时间")
+                Text(L("当前时间", "Time"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -753,7 +753,7 @@ struct HUDView: View {
                 Image(systemName: "power")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
-                Text("已开机")
+                Text(L("已开机", "Uptime"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -811,9 +811,9 @@ struct HUDView: View {
 
     private var actions: some View {
         HStack(spacing: 8) {
-            actionButton("清理", systemImage: "trash", primary: false) { onAction?("clean") }
-            actionButton("卸载", systemImage: "xmark.bin", primary: false) { onAction?("uninstall") }
-            actionButton("主界面", systemImage: "rectangle.on.rectangle", primary: true) { onAction?(nil) }
+            actionButton(L("清理", "Clean"), systemImage: "trash", primary: false) { onAction?("clean") }
+            actionButton(L("卸载", "Uninstall"), systemImage: "xmark.bin", primary: false) { onAction?("uninstall") }
+            actionButton(L("主界面", "Main"), systemImage: "rectangle.on.rectangle", primary: true) { onAction?(nil) }
         }
     }
 

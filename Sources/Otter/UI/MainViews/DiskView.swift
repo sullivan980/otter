@@ -348,8 +348,9 @@ struct DiskView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "磁盘",
-                          subtitle: "只读分析目录占用，按大小找出大文件与大目录，可逐层下钻；不会删除或移动任何文件。") {
+            SectionHeader(title: L("磁盘", "Disk"),
+                          subtitle: L("只读分析目录占用，按大小找出大文件与大目录，可逐层下钻；不会删除或移动任何文件。",
+                                      "Read-only usage analysis. Find large files and folders and drill down; nothing is deleted or moved.")) {
                 HStack(spacing: 8) {
                     if model.isScanning {
                         ProgressView().controlSize(.small)
