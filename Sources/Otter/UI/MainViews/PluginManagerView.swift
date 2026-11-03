@@ -31,40 +31,34 @@ struct PluginSection: View {
     var body: some View {
         PanelCard {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    SubHeader(text: L("HUD 插件 v2","HUD Plugins v2"))
+                HStack(spacing: 8) {
+                    SubHeader(text: L("HUD 插件", "HUD Plugins"),
+                             trailing: "\(store.plugins.count) " + L("个", "items"))
                     Spacer()
-                    Button {
-                        openPluginsDirectory()
-                    } label: {
-                        Label(L("打开插件目录","Open Plugins Folder"), systemImage: "folder")
-                            .font(.system(size: 11))
+                    Button { openPluginsDirectory() } label: {
+                        Image(systemName: "folder").font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    Button {
-                        store.reload()
-                    } label: {
-                        Label(L("重新加载","Reload"), systemImage: "arrow.clockwise")
-                            .font(.system(size: 11))
+                    .buttonStyle(.borderless)
+                    .help(L("打开插件目录", "Open Plugins Folder"))
+                    Button { store.reload() } label: {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 11))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    Button {
-                        installFromPanel()
-                    } label: {
-                        Label(L("安装插件…","Install Plugin…"), systemImage: "plus")
+                    .buttonStyle(.borderless)
+                    .help(L("重新加载", "Reload"))
+                    Button { installFromPanel() } label: {
+                        Label(L("安装插件…", "Install Plugin…"), systemImage: "plus")
                             .font(.system(size: 11))
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
 
-                Text(L("插件是声明式 HUD 样式包（manifest.json，无代码执行）。layout=\"stack\" 使用纵向堆叠模块布局；style 支持 cardRadius / spacing / showSparkline / typeface（system/mono/serif/rounded）。放进插件目录后会自动重载，无需重装应用。",
-                      "Plugins are declarative HUD style packs (manifest.json, no code execution). layout=\"stack\" uses a vertical stack; style supports cardRadius / spacing / showSparkline / typeface (system/mono/serif/rounded). Plugins hot-reload without reinstalling."))
-                    .font(.system(size: 10.5))
+                Text(L("声明式 HUD 样式包，无代码执行；放入插件目录后自动重载。",
+                       "Declarative HUD style packs, no code execution; hot-reload after adding files."))
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .help(L("格式：manifest.json；style 支持 cardRadius / spacing / showSparkline / typeface（system/mono/serif/rounded）。",
+                            "Format: manifest.json; style supports cardRadius / spacing / showSparkline / typeface (system/mono/serif/rounded)."))
 
                 if let message = ui.alertMessage {
                     StatusBanner(kind: ui.alertKind, title: message,
@@ -179,16 +173,15 @@ struct PluginSection: View {
                     .controlSize(.small)
             }
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(active ? Color.accentColor.opacity(0.08) : Color.primary.opacity(0.035))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(active ? Color.accentColor.opacity(0.45) : Color.primary.opacity(0.06),
-                              lineWidth: active ? 1.2 : 1)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(active ? Color.accentColor.opacity(0.35) : Color.clear, lineWidth: 1)
         )
     }
 
