@@ -35,6 +35,36 @@ if let data = FileManager.default.contents(atPath: "/tmp/otter-test-flags.json")
     if let s = obj["selftestOut"] as? String { setenv("OTTER_SELFTEST_OUT", s, 1) }
 }
 
+// 命令行入口（Shortcuts「运行 Shell 脚本」可直接调用）：
+//   Otter --snapshot        输出 JSON
+//   Otter --snapshot-text   输出一行中文
+//   Otter --open clean      打开指定分区（等价 otter://clean）
+let cliArgs = CommandLine.arguments
+if cliArgs.contains("--snapshot") || cliArgs.contains("--snapshot-text") {
+    let sampler = RealMetricsSampler()
+    _ = sampler.sample()
+    usleep(600_000)
+    let m = sampler.sample()
+    if cliArgs.contains("--snapshot-text") {
+        print("CPU \(Fmt.percent(m.cpuPercent)) · 内存 \(Fmt.percent(m.memUsedPercent)) · 磁盘 \(Fmt.percent(m.diskUsedPercent)) · ↑\(Fmt.rate(m.upBytesPerSec)) ↓\(Fmt.rate(m.downBytesPerSec))")
+    } else {
+        let dict: [String: Any] = [
+            "cpu": m.cpuPercent, "memory": m.memUsedPercent, "disk": m.diskUsedPercent,
+            "upBytesPerSec": m.upBytesPerSec, "downBytesPerSec": m.downBytesPerSec,
+            "cores": m.coreCount
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys]),
+           let text = String(data: data, encoding: .utf8) { print(text) }
+    }
+    exit(0)
+}
+if let idx = cliArgs.firstIndex(of: "--open"), idx + 1 < cliArgs.count {
+    if let url = URL(string: "otter://\(cliArgs[idx + 1])") {
+        NSWorkspace.shared.open(url)
+    }
+    exit(0)
+}
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate

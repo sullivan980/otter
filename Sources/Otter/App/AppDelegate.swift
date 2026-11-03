@@ -7,6 +7,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hud: HUDWindowController!
     private var mainWindow: MainWindowController?
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            guard let section = OtterURLRouter.section(for: url) else { continue }
+            state.openMainSection?(section)
+            state.openMainWindow?()
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         bootstrapServices()
         if ProcessInfo.processInfo.environment["OTTER_DEMO_RESULT"] == "1" {
@@ -22,6 +30,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 print(MenuBarFormat.selfTestJSON())
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
+                exit(0)
+            case "url-route":
+                let a = OtterURLRouter.section(for: URL(string: "otter://clean")!) == "clean"
+                let b = OtterURLRouter.section(for: URL(string: "otter://settings")!) == "settings"
+                let c = OtterURLRouter.section(for: URL(string: "otter://../../etc")!) == nil
+                let d = OtterURLRouter.section(for: URL(string: "https://clean")!) == nil
+                print("{\"mode\":\"url-route\",\"ok\":\(a && b && c && d)}")
                 exit(0)
             case "sensors":
                 let s = SensorService.read()
