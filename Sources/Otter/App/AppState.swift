@@ -5,7 +5,7 @@ import Combine
 final class AppState: ObservableObject {
     @Published var metrics = SystemMetrics.zero
     @Published var hudVisible = false { didSet { if oldValue != hudVisible { schedule() } } }
-    @Published var selectedSection: String = "clean"
+    @Published var selectedSection: String = "health"
     @Published var isPaused = false
 
     /// 由 AppDelegate 在启动后注入真实采样器。

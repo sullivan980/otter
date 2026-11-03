@@ -254,6 +254,10 @@ final class CleanViewModel: ObservableObject {
                     if cleanResult.success {
                         Prefs.shared.lastCleanAt = Date().timeIntervalSince1970
                         Prefs.shared.lastCleanBytes = total
+                        CleanHistoryStore.shared.add(kind: "clean",
+                                                     freedBytes: cleanResult.freedBytes,
+                                                     trashedBytes: cleanResult.trashedBytes,
+                                                     items: self.selectedCount())
                     }
                     if cleanResult.success {
                         let message = cleanResult.trashedBytes > 0

@@ -278,6 +278,9 @@ final class UninstallViewModel: ObservableObject {
                     self.expandedKinds = []
                     OperationResultCenter.shared.post(kind: .success, title: "卸载完成",
                                                       message: "\(scan.app.name)：已将 \(moved) 项移入废纸篓，可从废纸篓还原")
+                    CleanHistoryStore.shared.add(kind: "uninstall", freedBytes: 0,
+                                                 trashedBytes: bytes, items: moved,
+                                                 note: scan.app.name)
                     if Prefs.shared.notificationsEnabled {
                         Notifications.shared.postUninstallFinished(app: scan.app.name, bytes: bytes)
                     }

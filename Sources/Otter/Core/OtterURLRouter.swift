@@ -7,7 +7,7 @@ enum OtterURLRouter {
     static func section(for url: URL) -> String? {
         guard url.scheme?.lowercased() == scheme else { return nil }
         let candidate = (url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))).lowercased()
-        let allowed = ["clean", "uninstall", "space", "startup", "maintenance", "disk", "settings"]
+        let allowed = ["health", "clean", "uninstall", "space", "startup", "maintenance", "disk", "settings"]
         return allowed.contains(candidate) ? candidate : nil
     }
 }

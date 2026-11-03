@@ -31,6 +31,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case "clean-rules-fixture":
                 runSelfTestCleanRules()
                 exit(0)
+            case "history-fixture":
+                let path = "/tmp/otter-history-fixture.json"
+                try? FileManager.default.removeItem(atPath: path)
+                CleanHistoryStore.testURL = URL(fileURLWithPath: path)
+                defer { CleanHistoryStore.testURL = nil }
+                let store = CleanHistoryStore.shared
+                store.clear()
+                store.add(kind: "clean", freedBytes: 1000, trashedBytes: 2000, items: 3)
+                store.add(kind: "space", freedBytes: 500, trashedBytes: 0, items: 2)
+                let totalFreed = store.totalFreed
+                let totalTrashed = store.totalTrashed
+                CleanHistoryStore.shared.load()
+                let ok = store.events.count == 2 && totalFreed == 1500 && totalTrashed == 2000
+                print("{\"mode\":\"history-fixture\",\"ok\":\(ok),\"events\":\(store.events.count),\"freed\":\(totalFreed),\"trashed\":\(totalTrashed)}")
+                exit(0)
+            case "health-score":
+                let issues = [
+                    HealthIssue(id: "disk", title: "", detail: "", severity: .critical, bytes: 0, section: "", actionTitle: ""),
+                    HealthIssue(id: "clean", title: "", detail: "", severity: .warning, bytes: 3_000_000_000, section: "", actionTitle: ""),
+                ]
+                let score = HealthCheckService.score(for: issues)
+                print("{\"mode\":\"health-score\",\"ok\":\(score <= 65 && score > 0),\"score\":\(score)}")
+                exit(0)
             case "update-install-fixture":
                 let fm = FileManager.default
                 let root = "/tmp/otter-install-fixture"

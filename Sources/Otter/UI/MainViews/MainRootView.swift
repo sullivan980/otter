@@ -11,6 +11,7 @@ struct MainRootView: View {
 
     private var theme: AppTheme { themeStore.theme }
 
+    @StateObject private var health = HealthViewModel()
     @StateObject private var clean = CleanViewModel()
     @StateObject private var uninstall = UninstallViewModel()
     @StateObject private var disk = DiskViewModel()
@@ -52,7 +53,9 @@ struct MainRootView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch MainSection(rawValue: state.selectedSection) ?? .clean {
+        switch MainSection(rawValue: state.selectedSection) ?? .health {
+        case .health:
+            HealthView(model: health) { section in state.selectedSection = section }
         case .clean:
             CleanView(model: clean)
         case .uninstall:
@@ -75,7 +78,7 @@ struct MainRootView: View {
 struct MainSidebar: View {
     @ObservedObject var state: AppState
 
-    private var current: MainSection { MainSection(rawValue: state.selectedSection) ?? .clean }
+    private var current: MainSection { MainSection(rawValue: state.selectedSection) ?? .health }
     private var theme: AppTheme { ThemeStore.shared.theme }
 
     /// 侧栏不再单独铺底：与内容共用同一块窗口玻璃，只叠一层极淡的高光，形成一体化。

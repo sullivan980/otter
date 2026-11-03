@@ -4,10 +4,11 @@ import SwiftUI
 // MARK: - 主界面分区
 
 enum MainSection: String, CaseIterable, Identifiable {
-    case clean, uninstall, space, startup, maintenance, disk, settings
+    case health, clean, uninstall, space, startup, maintenance, disk, settings
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .health: return L("体检", "Health")
         case .clean: return L("清理", "Clean")
         case .uninstall: return L("卸载", "Uninstall")
         case .space: return L("空间", "Space")
@@ -19,6 +20,7 @@ enum MainSection: String, CaseIterable, Identifiable {
     }
     var icon: String {
         switch self {
+        case .health: return "stethoscope"
         case .clean: return "sparkles"
         case .uninstall: return "xmark.bin"
         case .space: return "shippingbox"

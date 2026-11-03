@@ -82,6 +82,8 @@ final class SpaceViewModel: ObservableObject {
             resultText = "已删除 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))"
             OperationResultCenter.shared.post(kind: .success, title: "空间清理完成",
                                               message: "已删除 \(result.removed) 项，释放 \(Fmt.bytes(Double(result.bytes)))")
+            CleanHistoryStore.shared.add(kind: "space", freedBytes: result.bytes,
+                                         trashedBytes: 0, items: result.removed)
         } else {
             resultText = "已删除 \(result.removed) 项，\(result.errors.count) 项失败"
             errorText = result.errors.joined(separator: "\n")
